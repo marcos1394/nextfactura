@@ -1,0 +1,54 @@
+/* Estilos para las nubes */
+.clouds {
+  position: absolute;
+  bottom: 0;
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  z-index: 1; /* Mantengo un z-index bajo para que no tapen el contenido */
+}
+
+.cloud {
+  width: 200px;
+  height: 60px;
+  background: white;
+  border-radius: 100px;
+  position: absolute;
+  bottom: 20px;
+  left: -200px;
+  animation: moveClouds 25s linear infinite;
+  z-index: 1;
+}
+
+.cloud2 {
+  width: 250px;
+  height: 80px;
+  bottom: 40px;
+  left: -250px;
+  animation: moveClouds 35s linear infinite;
+  z-index: 1;
+}
+
+.cloud3 {
+  width: 180px;
+  height: 50px;
+  bottom: 60px;
+  left: -180px;
+  animation: moveClouds 30s linear infinite;
+  z-index: 1;
+}
+
+/* Asegura que el botón siempre esté por encima de las nubes */
+button {
+  z-index: 10; /* Coloca el botón por encima de las nubes */
+}
+
+/* Animación de las nubes */
+@keyframes moveClouds {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(100vw);
+  }
+}
