@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { 
   CheckBadgeIcon, 
@@ -25,7 +25,26 @@ const NextFacturaHero = () => {
   const [selectedProduct, setSelectedProduct] = useState('NEXFACTURA');
   const [activeQuestion, setActiveQuestion] = useState(null);
   const [activeTestimonial, setActiveTestimonial] = useState(0);
+  const socialProofRef = useRef(null);
+// Hook para detectar si un elemento está visible
+const useOnScreen = (ref) => {
+  const [isIntersecting, setIntersecting] = useState(false);
 
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => setIntersecting(entry.isIntersecting),
+      { threshold: 0.5 }
+    );
+
+    if (ref.current) observer.observe(ref.current);
+
+    return () => observer.disconnect();
+  }, [ref]);
+
+  return isIntersecting;
+};
+
+const isSocialProofVisible = useOnScreen(socialProofRef);
 
 
   const typingPhrases = [
@@ -215,6 +234,15 @@ useEffect(() => {
   return () => clearInterval(interval); // Limpia el intervalo al desmontar
 }, [testimonials.length]);
 
+useEffect(() => {
+  const interval = setInterval(() => {
+    setActivePhrase((prev) => (prev + 1) % typingPhrases.length);
+  }, 3000); // Cambia cada 3 segundos
+
+  return () => clearInterval(interval); // Limpia el intervalo al desmontar
+}, [activePhrase]);
+
+
 
   const renderPlanPricing = (product) => {
     if (product === 'COMBINADO') {
@@ -275,7 +303,8 @@ useEffect(() => {
   return (
 <div className="min-h-screen bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 text-gray-900 dark:from-gray-900 dark:to-black dark:text-white transition-all duration-700">
 {/* Hero Section */}
-      <div className="container mx-auto px-4 py-16 grid md:grid-cols-2 gap-12 items-center">
+<div className="container mx-auto px-4 py-16 grid grid-cols-1 sm:grid-cols-2 gap-8 items-center">
+
         {/* Left Side: Hero Content */}
         <div className="space-y-8">
         <motion.h1 
@@ -291,15 +320,16 @@ useEffect(() => {
 
 
 
-          <p className="text-xl text-gray-600 dark:text-gray-300">
+<p className="text-xl text-gray-800 dark:text-gray-200">
+
             Solución completa de facturación electrónica diseñada específicamente para restaurantes que utilizan SoftRestaurant.
           </p>
 
           <div className="flex space-x-4">
-          <button className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-full hover:from-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg">
+          <button className="bg-gradient-to-r from-blue-600 to-purple-700 text-white px-6 py-3 rounded-full hover:from-purple-700 hover:to-pink-500 transition-all duration-300 shadow-lg">
           Comenzar Ahora
             </button>
-            <button className="bg-gradient-to-r from-blue-500 to-purple-500 text-white px-6 py-3 rounded-full hover:from-purple-600 hover:to-pink-600 transition-all duration-300 shadow-lg">
+            <button className="bg-gradient-to-r from-blue-600 to-purple-700 text-white px-6 py-3 rounded-full hover:from-purple-700 hover:to-pink-500 transition-all duration-300 shadow-lg">
             Solicitar Demo
             </button>
           </div>
@@ -331,7 +361,8 @@ useEffect(() => {
       <div className="bg-gray-100 dark:bg-gray-800 py-16">
         <div className="container mx-auto px-4">
           <h2 className="text-3xl font-bold text-center mb-12">Beneficios de NextFactura</h2>
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+
             {beneficios.map(({ icon: Icon, title, description }, index) => (
              <motion.div 
              key={title}
@@ -357,9 +388,10 @@ useEffect(() => {
       </div>
 
     {/* Social Proof Section - Completed Implementation */}
-<div className="bg-white dark:bg-gray-900 py-16">
+    <div ref={socialProofRef} className="bg-white dark:bg-gray-900 py-16">
+
   <div className="container mx-auto px-4">
-  <div className="grid md:grid-cols-3 gap-8 text-center">
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-center">
   {socialProof.map(({ icon: Icon, number, label }, index) => (
     <motion.div 
       key={label}
@@ -369,10 +401,19 @@ useEffect(() => {
       className="bg-gradient-to-br from-blue-50 to-purple-100 dark:from-gray-800 dark:to-gray-900 p-6 rounded-xl shadow-lg"
     >
       <Icon className="w-16 h-16 text-blue-600 mx-auto mb-4" />
-      <h3 className="text-4xl font-bold text-blue-900 dark:text-blue-200 mb-2">
-        <CountUp start={0} end={parseInt(number.replace(/[^\d]/g, ''))} duration={2} />
+      <h3 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
+
+      <motion.div
+  initial={{ opacity: 0, y: 20 }}
+  animate={isSocialProofVisible ? { opacity: 1, y: 0 } : {}}
+  transition={{ duration: 1 }}
+>
+  <CountUp start={0} end={parseInt(number.replace(/[^\d]/g, ''))} duration={2} />
+</motion.div>
+
+
       </h3>
-      <p className="text-gray-600 dark:text-gray-300">{label}</p>
+      <p className="text-gray-800 dark:text-gray-300">{label}</p>
     </motion.div>
   ))}
 </div>
@@ -380,7 +421,7 @@ useEffect(() => {
     {/* Optional: Testimonial Carousel */}
     <div className="mt-16">
       <h3 className="text-3xl font-bold text-center mb-8">Lo que dicen nuestros clientes</h3>
-      <div className="max-w-3xl mx-auto">
+      <div className="max-w-full sm:max-w-2xl lg:max-w-3xl mx-auto px-4">
       <motion.div
   key={activeTestimonial}
   initial={{ opacity: 0, x: 50 }}
