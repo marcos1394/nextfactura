@@ -38,12 +38,28 @@ function LoginPage() {
 
       toast.success('Inicio de sesión exitoso');
 
-      if (role === 'superadmin') {
-        navigate('/superadmin');
-      } else if (role === 'admin') {
-        navigate('/dashboard');
+      // Después de inicio de sesión exitoso, consultar estado del usuario
+      const statusResponse = await axios.get(`${process.env.REACT_APP_API_URL}/api/users/status`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const { hasPlan, hasRestaurant } = statusResponse.data;
+
+      if (!hasPlan) {
+        navigate('/plans');
+      } else if (hasPlan && !hasRestaurant) {
+        navigate('/restaurantconfig');
       } else {
-        setError('Rol de usuario no reconocido');
+        // Tiene plan y restaurante configurado, ahora redirige según el rol
+        if (role === 'superadmin') {
+          navigate('/superadmin');
+        } else if (role === 'admin') {
+          navigate('/dashboard');
+        } else {
+          setError('Rol de usuario no reconocido');
+        }
       }
     } catch (err) {
       setError(err.response?.data?.message || 'Credenciales incorrectas');
@@ -68,12 +84,27 @@ function LoginPage() {
 
       toast.success('Inicio de sesión con Google exitoso');
 
-      if (role === 'superadmin') {
-        navigate('/superadmin');
-      } else if (role === 'admin') {
-        navigate('/dashboard');
+      // Después del login con Google, también consultar estado
+      const statusResponse = await axios.get(`${process.env.REACT_APP_API_URL}/api/users/status`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const { hasPlan, hasRestaurant } = statusResponse.data;
+
+      if (!hasPlan) {
+        navigate('/plans');
+      } else if (hasPlan && !hasRestaurant) {
+        navigate('/restaurantconfig');
       } else {
-        setError('Rol de usuario no reconocido');
+        if (role === 'superadmin') {
+          navigate('/superadmin');
+        } else if (role === 'admin') {
+          navigate('/dashboard');
+        } else {
+          setError('Rol de usuario no reconocido');
+        }
       }
     } catch (error) {
       setError('Error al iniciar sesión con Google');
