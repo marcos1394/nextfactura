@@ -31,19 +31,21 @@ function PaymentGateway() {
         return;
       }
 
-      const response = await axios.post('http://localhost:5000/api/payment/create-payment', {
-        plan: selectedPlan,
-      }, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const response = await axios.post(
+        `${process.env.REACT_APP_API_URL}/api/payment/create-payment`,
+        { plan: selectedPlan },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
 
-      const preferenceId = response.data.id;
-      console.log('Preference ID:', preferenceId);
+      const initPoint = response.data.init_point;
+      console.log('Init Point:', initPoint);
 
-      // Redirecciona al usuario al entorno de sandbox
-      window.location.href = `https://sandbox.mercadopago.com.mx/checkout/v1/redirect?pref_id=${preferenceId}`;
+      // Redirecciona al checkout de Mercado Pago en producción
+      window.location.href = initPoint;
     } catch (error) {
       console.error('Error al crear la preferencia de pago:', error);
       setIsProcessing(false);
