@@ -301,7 +301,8 @@ useEffect(() => {
   };
 
   return (
-<div className="min-h-screen bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 text-gray-900 dark:from-gray-900 dark:to-black dark:text-white transition-all duration-700">
+<div className="min-h-screen overflow-hidden bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 text-gray-900 dark:from-gray-900 dark:to-black dark:text-white transition-all duration-700">
+
 {/* Hero Section */}
 <div className="container mx-auto px-4 py-16 grid grid-cols-1 sm:grid-cols-2 gap-8 items-center">
 
@@ -321,23 +322,29 @@ useEffect(() => {
 
 
 <p className="text-xl text-gray-800 dark:text-gray-200">
-
             Solución completa de facturación electrónica diseñada específicamente para restaurantes que utilizan SoftRestaurant.
           </p>
 
-          <div className="flex space-x-4">
-          <button className="bg-gradient-to-r from-blue-600 to-purple-700 text-white px-6 py-3 rounded-full hover:from-purple-700 hover:to-pink-500 transition-all duration-300 shadow-lg">
-          Comenzar Ahora
-            </button>
-            <button className="bg-gradient-to-r from-blue-600 to-purple-700 text-white px-6 py-3 rounded-full hover:from-purple-700 hover:to-pink-500 transition-all duration-300 shadow-lg">
-            Solicitar Demo
-            </button>
-          </div>
+          <div className="flex space-x-4 overflow-hidden">
+  <button 
+    onClick={() => (window.location.href = '/register')}
+    className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-700 text-white px-6 py-3 rounded-full hover:from-purple-700 hover:to-pink-500 transition-all duration-300 shadow-lg"
+  >
+    Comenzar Ahora
+  </button>
+  <button 
+    onClick={() => (window.location.href = '/register')}
+    className="w-full sm:w-auto bg-gradient-to-r from-blue-600 to-purple-700 text-white px-6 py-3 rounded-full hover:from-purple-700 hover:to-pink-500 transition-all duration-300 shadow-lg"
+  >
+    Solicitar Demo
+  </button>
+</div>
+
         </div>
 
         {/* Right Side: Plans */}
-        <div className="space-y-6">
-          <div className="flex space-x-4 mb-6">
+        <div className="space-y-6 max-w-full overflow-hidden px-4 sm:px-0">
+        <div className="flex space-x-4 mb-6">
             {['NEXFACTURA', 'NEXTMANAGER', 'COMBINADO'].map((product) => (
               <button 
                 key={product}
