@@ -8,6 +8,8 @@ import {
   InfoIcon, 
   CheckCircle2Icon 
 } from 'lucide-react';
+import Cookies from 'js-cookie';
+
 
 function PaymentGateway() {
   const location = useLocation();
@@ -17,41 +19,41 @@ function PaymentGateway() {
 
   const handlePayment = async () => {
     if (!selectedPlan) {
-      console.error('No hay un plan seleccionado.');
-      return;
+        console.error('No hay un plan seleccionado.');
+        return;
     }
 
     setIsProcessing(true);
 
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        console.error('No se encontró el token de autenticación.');
-        setIsProcessing(false);
-        return;
-      }
-
-      const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/payment/create-payment`,
-        { plan: selectedPlan },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
+        const token = Cookies.get('authToken'); // Recuperar token de cookies
+        if (!token) {
+            console.error('No se encontró el token de autenticación.');
+            setIsProcessing(false);
+            return;
         }
-      );
 
-      const initPoint = response.data.init_point;
-      console.log('Init Point:', initPoint);
+        const response = await axios.post(
+            `${process.env.REACT_APP_API_URL}/api/payment/create-payment`,
+            { plan: selectedPlan },
+            {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            }
+        );
 
-      // Redirecciona al checkout de Mercado Pago en producción
-      window.location.href = initPoint;
+        const initPoint = response.data.init_point;
+        console.log('Init Point:', initPoint);
+
+        window.location.href = initPoint; // Redirigir a Mercado Pago
     } catch (error) {
-      console.error('Error al crear la preferencia de pago:', error);
-      setIsProcessing(false);
-      alert('Hubo un error al intentar crear la preferencia de pago. Por favor, inténtalo nuevamente.');
+        console.error('Error al crear la preferencia de pago:', error);
+        setIsProcessing(false);
+        alert('Hubo un error al intentar crear la preferencia de pago. Por favor, inténtalo nuevamente.');
     }
-  };
+};
+
 
   if (!selectedPlan) {
     return (
