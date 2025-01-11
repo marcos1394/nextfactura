@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -9,6 +9,16 @@ import { ThemeContext } from '../context/ThemeContext';
 Modal.setAppElement('#root');
 
 function TicketSearch() {
+  // 1) Estado local para branding
+  const [branding, setBranding] = useState({
+    name: '',
+    logoUrl: '',
+    primaryColor: '#4f9bed', // color por defecto si no se recibe nada
+    secondaryColor: '#f5f5f5',
+    // Otros campos que gustes
+  });
+
+  // 2) Estado para la lógica de tickets (igual que antes)
   const [ticketData, setTicketData] = useState({
     ticketNumber: '',
     amount: '',
@@ -18,8 +28,40 @@ function TicketSearch() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+
   const { darkMode } = useContext(ThemeContext);
 
+  // Detectar subdominio actual
+  const host = window.location.host;
+  const subdomain = host.split('.')[0]; 
+  // Ej: "rest1"
+
+  // 3) useEffect para cargar branding según el subdominio
+  useEffect(() => {
+    // Si subdomain es "www" o es el dominio base, podrías saltar esta carga
+    if (!subdomain || subdomain === 'www' || subdomain === 'nextfactura') return;
+
+    // Llamar a tu backend para obtener los datos de brand
+    // Ajusta la URL según tu endpoint
+    axios
+      .get(`${process.env.REACT_APP_API_URL}/api/restaurants/brand?subdomain=${subdomain}`)
+      .then((res) => {
+        if (res.data.success) {
+          setBranding({
+            name: res.data.data.name,
+            logoUrl: res.data.data.logoUrl,
+            primaryColor: res.data.data.primaryColor,
+            secondaryColor: res.data.data.secondaryColor,
+            // etc...
+          });
+        }
+      })
+      .catch((error) => {
+        console.error('Error cargando branding:', error);
+      });
+  }, [subdomain]);
+
+  // 4) Funciones existentes (handleChange, handleSearch, etc.)
   const handleChange = (e) => {
     setTicketData({
       ...ticketData,
@@ -28,6 +70,7 @@ function TicketSearch() {
   };
 
   const handleSearch = async () => {
+    // Lógica idéntica a tu código original
     const { ticketNumber, amount, date } = ticketData;
 
     if (!ticketNumber || !amount || !date) {
@@ -39,11 +82,7 @@ function TicketSearch() {
     try {
       const response = await axios.post(
         `${process.env.REACT_APP_API_URL}/api/tickets/search`,
-        {
-          ticketNumber,
-          amount,
-          date,
-        },
+        { ticketNumber, amount, date },
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem('token')}`,
@@ -119,30 +158,72 @@ function TicketSearch() {
     }
   };
 
+  // 5) Render
   return (
-    <div className={`min-h-screen flex items-center justify-center p-4 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
-      <div className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-        <div className={`p-6 text-center ${darkMode ? 'bg-gray-700' : 'bg-blue-50'}`}>
+    <div
+      className={`min-h-screen flex items-center justify-center p-4 ${
+        darkMode ? 'bg-gray-900' : 'bg-gray-50'
+      }`}
+      /** 
+       * Podrías usar inline style con branding.primaryColor 
+       * e.g. style={{ backgroundColor: branding.secondaryColor }}
+       */
+      style={{ backgroundColor: branding.secondaryColor }}
+    >
+      <div
+        className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${
+          darkMode ? 'bg-gray-800' : 'bg-white'
+        }`}
+      >
+        {/* Encabezado personalizado */}
+        <div
+          className={`p-6 text-center ${
+            darkMode ? 'bg-gray-700' : 'bg-blue-50'
+          }`}
+          /** o style={{ backgroundColor: branding.primaryColor }} */
+          style={{ backgroundColor: branding.primaryColor }}
+        >
           <div className="flex justify-center mb-4">
-            <Ticket className={`w-12 h-12 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+            {branding.logoUrl ? (
+              <img
+                src={branding.logoUrl}
+                alt="Restaurante Logo"
+                className="w-16 h-16 object-contain rounded-full"
+              />
+            ) : (
+              <Ticket
+                className={`w-12 h-12 ${
+                  darkMode ? 'text-blue-400' : 'text-blue-600'
+                }`}
+              />
+            )}
           </div>
-          <h2 className={`text-3xl font-bold mb-2 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
-            Buscar Ticket
+          <h2
+            className={`text-3xl font-bold mb-2 ${
+              darkMode ? 'text-white' : 'text-gray-800'
+            }`}
+          >
+            {branding.name || 'Buscar Ticket'}
           </h2>
-          <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+          <p
+            className={`text-sm ${
+              darkMode ? 'text-gray-300' : 'text-gray-600'
+            }`}
+          >
             Ingresa los detalles de tu ticket para facturar
           </p>
         </div>
 
         <div className="p-6">
+          {/* Campos para ticket */}
           <div className="space-y-4">
             <div className="relative">
               <input
                 type="text"
                 name="ticketNumber"
                 className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-300 ${
-                  darkMode 
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500' 
+                  darkMode
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500'
                     : 'bg-white border-gray-300 text-gray-800 focus:ring-blue-400'
                 }`}
                 placeholder="Número de Ticket"
@@ -151,17 +232,22 @@ function TicketSearch() {
                 required
               />
               <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                <Ticket className={`w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                <Ticket
+                  className={`w-5 h-5 ${
+                    darkMode ? 'text-gray-400' : 'text-gray-500'
+                  }`}
+                />
               </div>
             </div>
 
+            {/* Monto */}
             <div className="relative">
               <input
                 type="number"
                 name="amount"
                 className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-300 ${
-                  darkMode 
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500' 
+                  darkMode
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500'
                     : 'bg-white border-gray-300 text-gray-800 focus:ring-blue-400'
                 }`}
                 placeholder="Monto"
@@ -170,17 +256,24 @@ function TicketSearch() {
                 required
               />
               <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                <span className={`text-lg font-bold ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>$</span>
+                <span
+                  className={`text-lg font-bold ${
+                    darkMode ? 'text-gray-400' : 'text-gray-500'
+                  }`}
+                >
+                  $
+                </span>
               </div>
             </div>
 
+            {/* Fecha */}
             <div className="relative">
               <input
                 type="date"
                 name="date"
                 className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-300 ${
-                  darkMode 
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500' 
+                  darkMode
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500'
                     : 'bg-white border-gray-300 text-gray-800 focus:ring-blue-400'
                 }`}
                 value={ticketData.date}
@@ -188,15 +281,19 @@ function TicketSearch() {
                 required
               />
               <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                <CheckCircle className={`w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                <CheckCircle
+                  className={`w-5 h-5 ${
+                    darkMode ? 'text-gray-400' : 'text-gray-500'
+                  }`}
+                />
               </div>
             </div>
 
             <button
               onClick={handleSearch}
               className={`w-full py-3 rounded-lg flex items-center justify-center space-x-2 transition-all duration-300 ${
-                darkMode 
-                  ? 'bg-blue-700 text-white hover:bg-blue-600' 
+                darkMode
+                  ? 'bg-blue-700 text-white hover:bg-blue-600'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               disabled={loading}
@@ -206,26 +303,37 @@ function TicketSearch() {
             </button>
           </div>
 
+          {/* Si se encontró el Ticket */}
           {selectedTicket && (
-            <div className={`mt-6 p-4 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-blue-50'}`}>
-              <h3 className={`text-xl font-bold mb-3 ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+            <div
+              className={`mt-6 p-4 rounded-lg ${
+                darkMode ? 'bg-gray-700' : 'bg-blue-50'
+              }`}
+            >
+              <h3
+                className={`text-xl font-bold mb-3 ${
+                  darkMode ? 'text-white' : 'text-gray-800'
+                }`}
+              >
                 Ticket Encontrado
               </h3>
               <div className="space-y-2">
                 <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  <strong>Número de Ticket:</strong> {selectedTicket.ticketNumber}
+                  <strong>Número de Ticket:</strong>{' '}
+                  {selectedTicket.ticketNumber}
                 </p>
                 <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
                   <strong>Monto:</strong> {selectedTicket.amount} MXN
                 </p>
                 <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  <strong>Fecha:</strong> {new Date(selectedTicket.date).toLocaleDateString()}
+                  <strong>Fecha:</strong>{' '}
+                  {new Date(selectedTicket.date).toLocaleDateString()}
                 </p>
                 <button
                   onClick={handleFacturar}
                   className={`w-full py-3 mt-4 rounded-lg transition-all duration-300 ${
-                    darkMode 
-                      ? 'bg-green-700 text-white hover:bg-green-600' 
+                    darkMode
+                      ? 'bg-green-700 text-white hover:bg-green-600'
                       : 'bg-green-600 text-white hover:bg-green-700'
                   }`}
                 >
@@ -240,14 +348,29 @@ function TicketSearch() {
       <Modal
         isOpen={isModalOpen}
         onRequestClose={() => setIsModalOpen(false)}
-        className={`outline-none absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-2xl shadow-2xl ${darkMode ? 'bg-gray-800' : 'bg-white'}`}
+        className={`outline-none absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-2xl shadow-2xl ${
+          darkMode ? 'bg-gray-800' : 'bg-white'
+        }`}
         overlayClassName="fixed inset-0 bg-black bg-opacity-50 z-50"
       >
-        <div className={`p-6 ${darkMode ? 'bg-gray-700' : 'bg-blue-50'} rounded-t-2xl`}>
+        <div
+          className={`p-6 ${
+            darkMode ? 'bg-gray-700' : 'bg-blue-50'
+          } rounded-t-2xl`}
+          style={{ backgroundColor: branding.primaryColor }}
+        >
           <div className="flex justify-center mb-4">
-            <Mail className={`w-12 h-12 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+            <Mail
+              className={`w-12 h-12 ${
+                darkMode ? 'text-blue-400' : 'text-blue-600'
+              }`}
+            />
           </div>
-          <h2 className={`text-2xl font-bold text-center ${darkMode ? 'text-white' : 'text-gray-800'}`}>
+          <h2
+            className={`text-2xl font-bold text-center ${
+              darkMode ? 'text-white' : 'text-gray-800'
+            }`}
+          >
             Enviar Factura
           </h2>
         </div>
@@ -257,8 +380,8 @@ function TicketSearch() {
               <input
                 type="email"
                 className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-300 ${
-                  darkMode 
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500' 
+                  darkMode
+                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500'
                     : 'bg-white border-gray-300 text-gray-800 focus:ring-blue-400'
                 }`}
                 placeholder="Correo electrónico"
@@ -267,14 +390,18 @@ function TicketSearch() {
                 required
               />
               <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                <Mail className={`w-5 h-5 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`} />
+                <Mail
+                  className={`w-5 h-5 ${
+                    darkMode ? 'text-gray-400' : 'text-gray-500'
+                  }`}
+                />
               </div>
             </div>
             <button
               type="submit"
               className={`w-full py-3 rounded-lg transition-all duration-300 ${
-                darkMode 
-                  ? 'bg-blue-700 text-white hover:bg-blue-600' 
+                darkMode
+                  ? 'bg-blue-700 text-white hover:bg-blue-600'
                   : 'bg-blue-600 text-white hover:bg-blue-700'
               } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
               disabled={loading}
