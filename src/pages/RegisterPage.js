@@ -88,7 +88,7 @@ function RegisterPage() {
         `${process.env.REACT_APP_API_URL}/api/users/register`,
         formData
       );
-      toast.success('Registro exitoso. Verifica tu correo electrónico para activar tu cuenta.');
+      toast.success('Registro exitoso. Te Redirigiremos al Inicio de Sesión para Comenzar.');
       setTimeout(() => {
         navigate('/login');
       }, 3000);
