@@ -36,10 +36,8 @@ function PaymentSuccess() {
     console.log('Status:', status);
     console.log('Payment ID:', paymentId);
     console.log('Preference ID:', preferenceId);
-
-    // 2. Si deseas confirmar manualmente el pago en tu backend:
-    //    Llamamos a /api/payment/confirm PASÁNDOLE el paymentId
-    //    (Tu backend ya hace la lógica de consultar MP por ID.)
+  
+    // 2. Si el pago es aprobado y tenemos el paymentId, confirmar en el backend
     if (status === 'approved' && paymentId) {
       fetch('/api/payment/confirm', {
         method: 'POST',
@@ -50,10 +48,17 @@ function PaymentSuccess() {
           if (!res.ok) throw new Error('Error confirmando pago');
           const data = await res.json();
           console.log('Respuesta confirmación de pago:', data);
+  
+          // Si el backend confirma el pago con éxito
           if (data.success) {
-            setConfirmationMessage('El pago se confirmó correctamente en el servidor.');
+            setConfirmationMessage('El pago se confirmó correctamente.');
+  
+            // Redirigir a /restaurantconfig después de 3 segundos
+            setTimeout(() => {
+              navigate('/restaurantconfig');
+            }, 3000);
           } else {
-            setConfirmationMessage('El servidor no pudo confirmar el pago (quizás ya estaba procesado).');
+            setConfirmationMessage('El servidor no pudo confirmar el pago.');
           }
         })
         .catch((err) => {
@@ -61,8 +66,8 @@ function PaymentSuccess() {
           setConfirmationMessage('Hubo un error al confirmar el pago en el servidor.');
         });
     }
-  }, [location, expandedFAQ]);
-
+  }, [location, navigate]);
+  
   return (
     <div 
       className={`
