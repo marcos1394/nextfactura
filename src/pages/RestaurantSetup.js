@@ -1,6 +1,6 @@
 import React, { useState, useRef, useContext } from 'react';
 import axios from 'axios';
-import { ThemeContext } from '../context/ThemeContext'; // Ajusta la ruta
+import { ThemeContext } from '../context/ThemeContext';
 import { ToastContainer, toast } from 'react-toastify';
 import {
   FaPlus,
@@ -14,11 +14,6 @@ import {
 } from 'react-icons/fa';
 import 'react-toastify/dist/ReactToastify.css';
 
-/**
- * Ejemplo de componente que combina:
- * - Configuración de un "portal" (dominio, colores, etc.)
- * - Configuración de múltiples restaurantes (datos fiscales, CSD, logo, etc.)
- */
 function PortalAndRestaurantSetup() {
   const { darkMode } = useContext(ThemeContext);
 
@@ -44,7 +39,7 @@ function PortalAndRestaurantSetup() {
     },
   ]);
 
-  // Refs para inputs de archivos
+  // Refs para inputs de archivos (por si requieres click manual)
   const csdCertificateInputRefs = useRef([]);
   const csdKeyInputRefs = useRef([]);
   const logoInputRefs = useRef([]);
@@ -54,32 +49,36 @@ function PortalAndRestaurantSetup() {
   // Manejo de cambios de la sección "Portal Config"
   const handlePortalChange = (e) => {
     const { name, value } = e.target;
-    setPortalConfig({ ...portalConfig, [name]: value });
+    setPortalConfig((prev) => ({ ...prev, [name]: value }));
   };
 
   // Manejo de selección de color
   const handlePortalColorChange = (name, value) => {
-    setPortalConfig({ ...portalConfig, [name]: value });
+    setPortalConfig((prev) => ({ ...prev, [name]: value }));
   };
 
   // Manejo de cambios en los restaurantes
   const handleRestaurantChange = (index, e) => {
     const { name, value } = e.target;
-    const updated = [...restaurants];
-    updated[index][name] = value;
-    setRestaurants(updated);
+    setRestaurants((prev) => {
+      const updated = [...prev];
+      updated[index][name] = value;
+      return updated;
+    });
   };
 
-  // Manejo de archivos (CSD, key, logo)
+  // Manejo de archivos (CSD .cer, .key, logo)
   const handleFileChange = (index, e) => {
-    const updated = [...restaurants];
-    updated[index][e.target.name] = e.target.files[0];
-    setRestaurants(updated);
+    setRestaurants((prev) => {
+      const updated = [...prev];
+      updated[index][e.target.name] = e.target.files[0];
+      return updated;
+    });
   };
 
   const handleAddRestaurant = () => {
-    setRestaurants([
-      ...restaurants,
+    setRestaurants((prev) => [
+      ...prev,
       {
         name: '',
         address: '',
@@ -94,23 +93,32 @@ function PortalAndRestaurantSetup() {
   };
 
   const handleRemoveRestaurant = (index) => {
-    const updated = restaurants.filter((_, i) => i !== index);
-    setRestaurants(updated);
+    setRestaurants((prev) => prev.filter((_, i) => i !== index));
   };
 
   // Submit final
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Revisar si hay restaurantes sin datos fiscales
+    const anyMissingFiscal = restaurants.some((rest) => {
+      return !rest.csd_certificate || !rest.csd_key;
+    });
+    if (anyMissingFiscal) {
+      // Mostramos advertencia, pero seguimos guardando
+      toast.warn('Sin información fiscal completa, no podrás facturar. Completa más tarde.', {
+        position: 'top-right',
+        autoClose: 5000,
+      });
+    }
+
     // 1. Creamos un FormData para subir archivos + datos
     const formData = new FormData();
 
-    // -- Sección Portal --
-    // Podemos mandar la config del portal en formato JSON dentro de formData
+    // Sección Portal (en formato JSON)
     formData.append('portalConfig', JSON.stringify(portalConfig));
 
-    // -- Múltiples restaurantes --
-    // Agrupamos la info en un solo JSON (sin archivos) + luego los archivos
+    // Múltiples restaurantes
     restaurants.forEach((restaurant, index) => {
       // Datos de texto
       formData.append(`restaurants[${index}][name]`, restaurant.name);
@@ -119,29 +127,19 @@ function PortalAndRestaurantSetup() {
       formData.append(`restaurants[${index}][fiscal_address]`, restaurant.fiscal_address);
       formData.append(`restaurants[${index}][csd_password]`, restaurant.csd_password);
 
-      // Archivos (CSD .cer, .key, logo)
+      // Archivos
       if (restaurant.csd_certificate) {
-        formData.append(
-          `restaurants[${index}][csd_certificate]`,
-          restaurant.csd_certificate
-        );
+        formData.append(`restaurants[${index}][csd_certificate]`, restaurant.csd_certificate);
       }
       if (restaurant.csd_key) {
-        formData.append(
-          `restaurants[${index}][csd_key]`,
-          restaurant.csd_key
-        );
+        formData.append(`restaurants[${index}][csd_key]`, restaurant.csd_key);
       }
       if (restaurant.logo) {
-        formData.append(
-          `restaurants[${index}][logo]`,
-          restaurant.logo
-        );
+        formData.append(`restaurants[${index}][logo]`, restaurant.logo);
       }
     });
 
     try {
-      // Envía al endpoint. Ajusta la ruta e headers
       await axios.post(
         `${process.env.REACT_APP_API_URL}/api/portal-and-restaurants-setup`,
         formData,
@@ -152,13 +150,11 @@ function PortalAndRestaurantSetup() {
           },
         }
       );
-
       setError(null);
       toast.success('Portal y Restaurantes configurados exitosamente', {
         position: 'top-right',
         autoClose: 3000,
       });
-
     } catch (error) {
       console.error('Error al configurar:', error);
       setError('Error al configurar el portal y restaurantes');
@@ -166,21 +162,20 @@ function PortalAndRestaurantSetup() {
   };
 
   // COMPONENTES AUXILIARES
-
-  const InputField = ({ 
-    label, 
-    name, 
-    value, 
-    onChange, 
-    placeholder, 
-    type = 'text', 
-    icon: Icon = null, 
-    required = true 
+  const InputField = ({
+    label,
+    name,
+    value,
+    onChange,
+    placeholder,
+    type = 'text',
+    icon: Icon = null,
+    required = false, // Ahora lo ponemos false para no bloquear la edición
   }) => (
     <div className="relative mb-4">
       {label && <label className="block mb-1 font-medium">{label}</label>}
       {Icon && (
-        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">
+        <div className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 pointer-events-none">
           <Icon size={20} />
         </div>
       )}
@@ -190,9 +185,10 @@ function PortalAndRestaurantSetup() {
         className={`
           w-full p-3 pl-${Icon ? '10' : '3'} rounded-lg border-2 transition-all duration-300
           focus:outline-none focus:ring-2
-          ${darkMode 
-            ? 'bg-gray-700 text-white border-gray-600 focus:border-blue-500 focus:ring-blue-600'
-            : 'bg-white text-black border-gray-300 focus:border-blue-400 focus:ring-blue-400'
+          ${
+            darkMode
+              ? 'bg-gray-700 text-white border-gray-600 focus:border-blue-500 focus:ring-blue-600'
+              : 'bg-white text-black border-gray-300 focus:border-blue-400 focus:ring-blue-400'
           }
         `}
         placeholder={placeholder}
@@ -219,13 +215,13 @@ function PortalAndRestaurantSetup() {
     </div>
   );
 
-  const FileUploadButton = ({ 
-    name, 
-    fileName, 
-    onClickHandler, 
+  const FileUploadButton = ({
+    name,
+    fileName,
+    onClickHandlerRef,
     onChangeFile,
-    icon: Icon, 
-    label 
+    icon: Icon,
+    label,
   }) => (
     <div className="mb-4">
       {label && <label className="block mb-2 font-medium">{label}:</label>}
@@ -234,12 +230,12 @@ function PortalAndRestaurantSetup() {
           type="file"
           name={name}
           className="hidden"
-          ref={onClickHandler}
+          ref={onClickHandlerRef}
           onChange={onChangeFile}
         />
         <button
           type="button"
-          onClick={() => onClickHandler.current.click()}
+          onClick={() => onClickHandlerRef.current.click()}
           className={`
             w-full bg-gradient-to-r from-blue-500 to-blue-600 
             text-white px-4 py-3 rounded-lg 
@@ -258,30 +254,30 @@ function PortalAndRestaurantSetup() {
 
   // RENDER
   return (
-    <div 
+    <div
       className={`
-        min-h-screen flex items-center justify-center p-4 
-        ${darkMode 
-          ? 'bg-gradient-to-br from-gray-900 to-gray-800 text-white' 
-          : 'bg-gradient-to-br from-blue-100 to-white text-black'
+        min-h-screen flex items-center justify-center p-4
+        ${
+          darkMode
+            ? 'bg-gradient-to-br from-gray-900 to-gray-800 text-white'
+            : 'bg-gradient-to-br from-blue-100 to-white text-black'
         }
       `}
     >
-      <div 
+      <div
         className={`
           max-w-5xl w-full p-8 rounded-3xl shadow-2xl transition-all duration-300
-          ${darkMode 
-            ? 'bg-gray-800 border-2 border-gray-700'
-            : 'bg-white border border-gray-200'}
+          ${darkMode ? 'bg-gray-800 border-2 border-gray-700' : 'bg-white border border-gray-200'}
         `}
       >
-        <h2 
+        <h2
           className={`
-            text-4xl font-extrabold mb-8 text-center 
-            bg-clip-text text-transparent 
-            ${darkMode 
-              ? 'bg-gradient-to-r from-blue-400 to-blue-600' 
-              : 'bg-gradient-to-r from-blue-600 to-blue-800'
+            text-4xl font-extrabold mb-8 text-center
+            bg-clip-text text-transparent
+            ${
+              darkMode
+                ? 'bg-gradient-to-r from-blue-400 to-blue-600'
+                : 'bg-gradient-to-r from-blue-600 to-blue-800'
             }
           `}
         >
@@ -296,16 +292,14 @@ function PortalAndRestaurantSetup() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Sección de Configuración de Portal */}
-          <div 
+          <div
             className={`
-              p-6 rounded-2xl 
-              ${darkMode 
-                ? 'bg-gray-700 border-2 border-gray-600'
-                : 'bg-gray-50 border border-gray-200'}
+              p-6 rounded-2xl
+              ${darkMode ? 'bg-gray-700 border-2 border-gray-600' : 'bg-gray-50 border border-gray-200'}
               hover:shadow-lg
             `}
           >
-            <h3 
+            <h3
               className={`
                 text-2xl font-semibold mb-4
                 ${darkMode ? 'text-white' : 'text-blue-800'}
@@ -330,7 +324,7 @@ function PortalAndRestaurantSetup() {
               name="customDomain"
               value={portalConfig.customDomain}
               onChange={handlePortalChange}
-              placeholder="ej. mirestaurante.nextafactura.com.mx"
+              placeholder="ej. mirestaurante.nextfactura.com.mx"
               icon={FaLink}
             />
 
@@ -353,20 +347,18 @@ function PortalAndRestaurantSetup() {
 
           {/* Sección de Restaurantes */}
           {restaurants.map((restaurant, index) => (
-            <div 
-              key={index}
+            <div
+              key={`restaurant-${index}`} 
               className={`
                 p-6 rounded-2xl transition-all duration-300 mt-4
-                ${darkMode 
-                  ? 'bg-gray-700 border-2 border-gray-600'
-                  : 'bg-gray-50 border border-gray-200'}
+                ${darkMode ? 'bg-gray-700 border-2 border-gray-600' : 'bg-gray-50 border border-gray-200'}
                 hover:shadow-lg
               `}
             >
               <div className="flex justify-between items-center mb-6">
-                <h3 
+                <h3
                   className={`
-                    text-2xl font-semibold 
+                    text-2xl font-semibold
                     ${darkMode ? 'text-white' : 'text-blue-800'}
                   `}
                 >
@@ -377,8 +369,8 @@ function PortalAndRestaurantSetup() {
                     type="button"
                     onClick={() => handleRemoveRestaurant(index)}
                     className="
-                      text-red-500 hover:text-red-700 
-                      bg-transparent hover:bg-red-100 
+                      text-red-500 hover:text-red-700
+                      bg-transparent hover:bg-red-100
                       p-2 rounded-full transition-all duration-300
                     "
                   >
@@ -396,6 +388,7 @@ function PortalAndRestaurantSetup() {
                   onChange={(e) => handleRestaurantChange(index, e)}
                   placeholder="Nombre del restaurante"
                   icon={FaServer}
+                  required={false}
                 />
                 <InputField
                   label="Dirección"
@@ -404,6 +397,7 @@ function PortalAndRestaurantSetup() {
                   onChange={(e) => handleRestaurantChange(index, e)}
                   placeholder="Dirección"
                   icon={FaServer}
+                  required={false}
                 />
                 <InputField
                   label="RFC"
@@ -412,6 +406,7 @@ function PortalAndRestaurantSetup() {
                   onChange={(e) => handleRestaurantChange(index, e)}
                   placeholder="RFC"
                   icon={FaCertificate}
+                  required={false}
                 />
                 <InputField
                   label="Dirección Fiscal"
@@ -420,6 +415,7 @@ function PortalAndRestaurantSetup() {
                   onChange={(e) => handleRestaurantChange(index, e)}
                   placeholder="Dirección fiscal"
                   icon={FaServer}
+                  required={false}
                 />
               </div>
 
@@ -428,7 +424,7 @@ function PortalAndRestaurantSetup() {
                 <FileUploadButton
                   name="csd_certificate"
                   fileName={restaurant.csd_certificate?.name}
-                  onClickHandler={(el) => (csdCertificateInputRefs.current[index] = el)}
+                  onClickHandlerRef={(el) => (csdCertificateInputRefs.current[index] = el)}
                   onChangeFile={(e) => handleFileChange(index, e)}
                   icon={FaCertificate}
                   label="Certificado CSD (.cer)"
@@ -437,7 +433,7 @@ function PortalAndRestaurantSetup() {
                 <FileUploadButton
                   name="csd_key"
                   fileName={restaurant.csd_key?.name}
-                  onClickHandler={(el) => (csdKeyInputRefs.current[index] = el)}
+                  onClickHandlerRef={(el) => (csdKeyInputRefs.current[index] = el)}
                   onChangeFile={(e) => handleFileChange(index, e)}
                   icon={FaKey}
                   label="Llave privada CSD (.key)"
@@ -446,7 +442,7 @@ function PortalAndRestaurantSetup() {
                 <FileUploadButton
                   name="logo"
                   fileName={restaurant.logo?.name}
-                  onClickHandler={(el) => (logoInputRefs.current[index] = el)}
+                  onClickHandlerRef={(el) => (logoInputRefs.current[index] = el)}
                   onChangeFile={(e) => handleFileChange(index, e)}
                   icon={FaFileUpload}
                   label="Logo del Restaurante"
@@ -461,6 +457,7 @@ function PortalAndRestaurantSetup() {
                 placeholder="Contraseña CSD"
                 type="password"
                 icon={FaKey}
+                required={false}
               />
             </div>
           ))}
@@ -493,20 +490,11 @@ function PortalAndRestaurantSetup() {
                 disabled:opacity-50 disabled:cursor-not-allowed
                 shadow-md hover:shadow-lg
               "
+              // Requisitos mínimos: PortalName y customDomain, y el restaurante debe tener name+address (?)
               disabled={
-                // Deshabilitar si falta info vital
                 !portalConfig.portalName ||
                 !portalConfig.customDomain ||
-                restaurants.some(
-                  (rest) =>
-                    !rest.name ||
-                    !rest.address ||
-                    !rest.rfc ||
-                    !rest.fiscal_address ||
-                    !rest.csd_password ||
-                    !rest.csd_certificate ||
-                    !rest.csd_key
-                )
+                restaurants.some((rest) => !rest.name || !rest.address)
               }
             >
               Guardar Configuración
@@ -514,7 +502,7 @@ function PortalAndRestaurantSetup() {
           </div>
         </form>
 
-        <ToastContainer 
+        <ToastContainer
           position="top-right"
           autoClose={3000}
           hideProgressBar={false}
