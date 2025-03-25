@@ -1,7 +1,7 @@
 // UserProfile.js
 import React, { useEffect, useState, useContext } from 'react';
 import axios from 'axios';
-import { ThemeContext } from '../context/ThemeContext';
+import { useThemeContext } from '../context/ThemeContext';
 
 function UserProfile() {
   const [userData, setUserData] = useState({
@@ -14,7 +14,7 @@ function UserProfile() {
     },
     restaurants: [],
   });
-  const { darkMode } = useContext(ThemeContext);
+  const { darkMode } = useThemeContext();
 
   useEffect(() => {
     const fetchUserData = async () => {

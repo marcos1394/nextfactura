@@ -1,9 +1,9 @@
 import React, { useContext } from 'react';
 import { FaTimesCircle, FaArrowLeft } from 'react-icons/fa'; 
-import { ThemeContext } from '../context/ThemeContext';
+import { useThemeContext } from '../context/ThemeContext';
 
 function PaymentFailure() {
-  const { darkMode } = useContext(ThemeContext);
+  const { darkMode } = useThemeContext();
 
   const handleRetryPayment = () => {
     window.location.href = '/plans';

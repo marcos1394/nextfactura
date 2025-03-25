@@ -114,6 +114,10 @@ function App() {
               <Route path="/payment-failure" element={<PaymentFailure />} />
               <Route path="/payment-pending" element={<PaymentPending />} />
 
+                {/* Rutas para el admin */}
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/restaurantconfig" element={<RestaurantSetup />} />
+
               {/* Rutas para el superadmin */}
               <Route
                 path="/admindashboard"
@@ -151,10 +155,6 @@ function App() {
                   />
                 }
               />
-
-              {/* Rutas para el admin */}
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/restaurantconfig" element={<RestaurantSetup />} />
             </Routes>
           </div>
           <Footer />

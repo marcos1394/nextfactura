@@ -12,7 +12,7 @@ export default function Header() {
   return (
     <header className="bg-white dark:bg-black text-black dark:text-white shadow-md">
       <div className="container mx-auto px-6 py-3 flex justify-between items-center">
-        <img src="/images/logo.jpeg" alt="NextFactura Logo" className="w-32 h-auto" />
+        <img src="/public/images/logo.jpeg" alt="NextFactura Logo" className="w-32 h-auto" />
 
         <div className="hidden md:flex space-x-6">
           <Link to="hero" smooth={true} className="hover:text-gray-600 dark:hover:text-gray-300 cursor-pointer">

@@ -2,12 +2,12 @@
 import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ThemeContext } from '../context/ThemeContext';
+import { useThemeContext } from '../context/ThemeContext';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 function ResetPasswordPage() {
-  const { darkMode } = useContext(ThemeContext);
+  const { darkMode } = useThemeContext();
   const { token } = useParams();
   const navigate = useNavigate();
   const [password, setPassword] = useState('');

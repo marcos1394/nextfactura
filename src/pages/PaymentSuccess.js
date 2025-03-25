@@ -1,6 +1,6 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { ThemeContext } from '../context/ThemeContext';
+import { useThemeContext } from '../context/ThemeContext';
 import { 
   CheckCircleIcon, 
   ArrowRightIcon, 
@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 
 function PaymentSuccess() {
-  const { darkMode } = useContext(ThemeContext);
+  const { darkMode } = useThemeContext();
   const navigate = useNavigate();
   const location = useLocation();
   

@@ -1,9 +1,9 @@
 import React, { useContext, useState, useEffect } from 'react';
 import { FaHourglassHalf, FaCheckCircle } from 'react-icons/fa'; 
-import { ThemeContext } from '../context/ThemeContext';
+import { useThemeContext } from '../context/ThemeContext';
 
 function PaymentPending() {
-  const { darkMode } = useContext(ThemeContext);
+  const { darkMode } = useThemeContext();
   const [dots, setDots] = useState('');
 
   useEffect(() => {

@@ -4,7 +4,7 @@ import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Modal from 'react-modal';
 import { Search, Ticket, Mail, CheckCircle } from 'lucide-react';
-import { ThemeContext } from '../context/ThemeContext';
+import { useThemeContext } from '../context/ThemeContext';
 
 Modal.setAppElement('#root');
 
@@ -29,7 +29,7 @@ function TicketSearch() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const { darkMode } = useContext(ThemeContext);
+  const { darkMode } = useThemeContext();
 
   // Detectar subdominio actual
   const host = window.location.host;

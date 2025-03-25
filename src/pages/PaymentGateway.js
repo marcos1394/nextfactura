@@ -1,7 +1,7 @@
 import React, { useContext, useState } from 'react';
 import axios from 'axios';
 import { useLocation, Link } from 'react-router-dom';
-import { ThemeContext } from '../context/ThemeContext';
+import { useThemeContext } from '../context/ThemeContext';
 import { 
   CreditCardIcon, 
   ShieldCheckIcon, 
@@ -14,7 +14,7 @@ import Cookies from 'js-cookie';
 function PaymentGateway() {
   const location = useLocation();
   const { selectedPlan } = location.state || {};
-  const { darkMode } = useContext(ThemeContext);
+  const { darkMode } = useThemeContext();
   const [isProcessing, setIsProcessing] = useState(false);
 
   const handlePayment = async () => {

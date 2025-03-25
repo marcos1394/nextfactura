@@ -1,6 +1,6 @@
 import React, { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ThemeContext } from '../context/ThemeContext';
+import { useThemeContext } from '../context/ThemeContext';
 import { 
   CheckIcon, 
   ChevronDownIcon, 
@@ -11,7 +11,7 @@ import {
 
 function PlanSelection() {
   const [activeSection, setActiveSection] = useState('individual');
-  const { darkMode } = useContext(ThemeContext);
+  const { darkMode } = useThemeContext();
   const navigate = useNavigate();
   const [expandedFAQ, setExpandedFAQ] = useState(null);
 
