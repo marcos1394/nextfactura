@@ -1,0 +1,55 @@
+{
+  "dev": {
+    "awscloudformation": {
+      "AuthRoleName": "amplify-nextfactura-dev-8667a-authRole",
+      "UnauthRoleArn": "arn:aws:iam::420332103472:role/amplify-nextfactura-dev-8667a-unauthRole",
+      "AuthRoleArn": "arn:aws:iam::420332103472:role/amplify-nextfactura-dev-8667a-authRole",
+      "Region": "us-east-1",
+      "DeploymentBucketName": "amplify-nextfactura-dev-8667a-deployment",
+      "UnauthRoleName": "amplify-nextfactura-dev-8667a-unauthRole",
+      "StackName": "amplify-nextfactura-dev-8667a",
+      "StackId": "arn:aws:cloudformation:us-east-1:420332103472:stack/amplify-nextfactura-dev-8667a/b5c05bb0-1fcb-11f0-bfc7-0e371cf49ae5",
+      "AmplifyAppId": "d2z7ecdhsqeltl",
+      "AuthTriggerTemplateURL": "https://s3.amazonaws.com/amplify-nextfactura-dev-8667a-deployment/amplify-cfn-templates/auth/auth-trigger-cloudformation-template.json"
+    },
+    "categories": {
+      "hosting": {
+        "amplifyhosting": {
+          "appId": "d2z7ecdhsqeltl",
+          "type": "manual"
+        }
+      },
+      "auth": {
+        "nextfactura51c2147e": {
+          "userPoolId": "us-east-1_07FxQq2Lz",
+          "userPoolName": "User pool - bzztt2",
+          "webClientId": "16bl9dcfdlc0q54fon210mdbtc",
+          "nativeClientId": "16bl9dcfdlc0q54fon210mdbtc"
+        },
+        "nextfacturac4a6ff03": {
+          "facebookAppId": "1369206240959906",
+          "googleClientId": "120399348208-hkivtuvii2sk0vj1lp92q640dkfs2ajj.apps.googleusercontent.com"
+        },
+        "userPoolGroups": {}
+      },
+      "function": {
+        "nextfacturac4a6ff03PostConfirmation": {
+          "GROUP": "RestaurantOwners",
+          "deploymentBucketName": "amplify-nextfactura-dev-8667a-deployment",
+          "s3Key": "amplify-builds/nextfacturac4a6ff03PostConfirmation-6f663577714d49726d4a-build.zip"
+        },
+        "nextfacturac4a6ff03PreTokenGeneration": {
+          "deploymentBucketName": "amplify-nextfactura-dev-8667a-deployment",
+          "s3Key": "amplify-builds/nextfacturac4a6ff03PreTokenGeneration-335a4654632f41704961-build.zip"
+        },
+        "AdminQueries75ef75af": {
+          "deploymentBucketName": "amplify-nextfactura-dev-8667a-deployment",
+          "s3Key": "amplify-builds/AdminQueries75ef75af-5642733157774d362b44-build.zip"
+        }
+      },
+      "api": {
+        "AdminQueries": {}
+      }
+    }
+  }
+}

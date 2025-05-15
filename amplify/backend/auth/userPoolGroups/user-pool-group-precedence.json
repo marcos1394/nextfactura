@@ -1,0 +1,10 @@
+[
+  {
+    "groupName": "SuperAdmins",
+    "precedence": 1
+  },
+  {
+    "groupName": "RestaurantOwners",
+    "precedence": 2
+  }
+]

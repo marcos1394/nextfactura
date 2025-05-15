@@ -1,0 +1,253 @@
+{
+  "api": {
+    "AdminQueries": {
+      "authorizationType": "AMAZON_COGNITO_USER_POOLS",
+      "dependsOn": [
+        {
+          "attributes": [
+            "UserPoolId"
+          ],
+          "category": "auth",
+          "resourceName": "nextfacturac4a6ff03"
+        },
+        {
+          "attributes": [
+            "Arn",
+            "Name"
+          ],
+          "category": "function",
+          "resourceName": "AdminQueries75ef75af"
+        }
+      ],
+      "providerPlugin": "awscloudformation",
+      "service": "API Gateway"
+    }
+  },
+  "auth": {
+    "nextfacturac4a6ff03": {
+      "customAuth": false,
+      "dependsOn": [
+        {
+          "attributes": [
+            "Arn",
+            "Name"
+          ],
+          "category": "function",
+          "resourceName": "nextfacturac4a6ff03PostConfirmation",
+          "triggerProvider": "Cognito"
+        },
+        {
+          "attributes": [
+            "Arn",
+            "Name"
+          ],
+          "category": "function",
+          "resourceName": "nextfacturac4a6ff03PreTokenGeneration",
+          "triggerProvider": "Cognito"
+        }
+      ],
+      "frontendAuthConfig": {
+        "mfaConfiguration": "OPTIONAL",
+        "mfaTypes": [
+          "TOTP"
+        ],
+        "passwordProtectionSettings": {
+          "passwordPolicyCharacters": [
+            "REQUIRES_LOWERCASE",
+            "REQUIRES_UPPERCASE",
+            "REQUIRES_NUMBERS",
+            "REQUIRES_SYMBOLS"
+          ],
+          "passwordPolicyMinLength": 8
+        },
+        "signupAttributes": [
+          "EMAIL",
+          "NAME"
+        ],
+        "socialProviders": [
+          "FACEBOOK",
+          "GOOGLE"
+        ],
+        "usernameAttributes": [
+          "EMAIL"
+        ],
+        "verificationMechanisms": [
+          "EMAIL"
+        ]
+      },
+      "providerPlugin": "awscloudformation",
+      "service": "Cognito"
+    },
+    "userPoolGroups": {
+      "dependsOn": [
+        {
+          "attributes": [
+            "UserPoolId",
+            "AppClientIDWeb",
+            "AppClientID",
+            "IdentityPoolId"
+          ],
+          "category": "auth",
+          "resourceName": "nextfacturac4a6ff03"
+        }
+      ],
+      "providerPlugin": "awscloudformation",
+      "service": "Cognito-UserPool-Groups"
+    }
+  },
+  "function": {
+    "AdminQueries75ef75af": {
+      "build": true,
+      "dependsOn": [
+        {
+          "attributes": [
+            "UserPoolId"
+          ],
+          "category": "auth",
+          "resourceName": "nextfacturac4a6ff03"
+        }
+      ],
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    },
+    "nextfacturac4a6ff03PostConfirmation": {
+      "build": true,
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    },
+    "nextfacturac4a6ff03PreTokenGeneration": {
+      "build": true,
+      "providerPlugin": "awscloudformation",
+      "service": "Lambda"
+    }
+  },
+  "hosting": {
+    "amplifyhosting": {
+      "providerPlugin": "awscloudformation",
+      "service": "amplifyhosting",
+      "type": "manual"
+    }
+  },
+  "parameters": {
+    "AMPLIFY_auth_nextfactura51c2147e_nativeClientId": {
+      "usedBy": [
+        {
+          "category": "auth",
+          "resourceName": "nextfactura51c2147e"
+        }
+      ]
+    },
+    "AMPLIFY_auth_nextfactura51c2147e_userPoolId": {
+      "usedBy": [
+        {
+          "category": "auth",
+          "resourceName": "nextfactura51c2147e"
+        }
+      ]
+    },
+    "AMPLIFY_auth_nextfactura51c2147e_userPoolName": {
+      "usedBy": [
+        {
+          "category": "auth",
+          "resourceName": "nextfactura51c2147e"
+        }
+      ]
+    },
+    "AMPLIFY_auth_nextfactura51c2147e_webClientId": {
+      "usedBy": [
+        {
+          "category": "auth",
+          "resourceName": "nextfactura51c2147e"
+        }
+      ]
+    },
+    "AMPLIFY_auth_nextfacturac4a6ff03_facebookAppId": {
+      "usedBy": [
+        {
+          "category": "auth",
+          "resourceName": "nextfacturac4a6ff03"
+        }
+      ]
+    },
+    "AMPLIFY_auth_nextfacturac4a6ff03_googleClientId": {
+      "usedBy": [
+        {
+          "category": "auth",
+          "resourceName": "nextfacturac4a6ff03"
+        }
+      ]
+    },
+    "AMPLIFY_function_AdminQueries75ef75af_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "AdminQueries75ef75af"
+        }
+      ]
+    },
+    "AMPLIFY_function_AdminQueries75ef75af_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "AdminQueries75ef75af"
+        }
+      ]
+    },
+    "AMPLIFY_function_nextfacturac4a6ff03PostConfirmation_GROUP": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "nextfacturac4a6ff03PostConfirmation"
+        }
+      ]
+    },
+    "AMPLIFY_function_nextfacturac4a6ff03PostConfirmation_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "nextfacturac4a6ff03PostConfirmation"
+        }
+      ]
+    },
+    "AMPLIFY_function_nextfacturac4a6ff03PostConfirmation_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "nextfacturac4a6ff03PostConfirmation"
+        }
+      ]
+    },
+    "AMPLIFY_function_nextfacturac4a6ff03PreTokenGeneration_deploymentBucketName": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "nextfacturac4a6ff03PreTokenGeneration"
+        }
+      ]
+    },
+    "AMPLIFY_function_nextfacturac4a6ff03PreTokenGeneration_s3Key": {
+      "usedBy": [
+        {
+          "category": "function",
+          "resourceName": "nextfacturac4a6ff03PreTokenGeneration"
+        }
+      ]
+    },
+    "AMPLIFY_hosting_amplifyhosting_appId": {
+      "usedBy": [
+        {
+          "category": "hosting",
+          "resourceName": "amplifyhosting"
+        }
+      ]
+    },
+    "AMPLIFY_hosting_amplifyhosting_type": {
+      "usedBy": [
+        {
+          "category": "hosting",
+          "resourceName": "amplifyhosting"
+        }
+      ]
+    }
+  }
+}
