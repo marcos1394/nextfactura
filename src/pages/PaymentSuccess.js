@@ -1,186 +1,114 @@
-import React, { useContext, useState, useEffect } from 'react';
-import { useNavigate, useLocation, Link } from 'react-router-dom'; // Añadido Link
+// src/pages/PaymentSuccessPage.js
+import React from 'react';
+import { useLocation, useNavigate, Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
-import {
-  CheckCircleIcon,
-  ArrowRightIcon,
-  RocketIcon,
-  SparklesIcon,
-  PhoneIcon,
-  FileTextIcon,
-  MailIcon,
-  ChevronDownIcon
-} from 'lucide-react'; // O importa desde @heroicons/react/24/solid si usas esos
-import { toast } from 'react-toastify';
+import { CheckBadgeIcon, RocketLaunchIcon, ArrowRightIcon } from '@heroicons/react/24/solid';
 
-function PaymentSuccess() {
-  const { darkMode } = useThemeContext();
-  const navigate = useNavigate();
-  const location = useLocation();
+/**
+ * PaymentSuccessPage - Refinada para máximo impacto y claridad post-compra.
+ * * Estrategia de UX/UI:
+ * 1.  Enfoque Absoluto en el Éxito: Se elimina el ruido (secciones de soporte, FAQ) para centrar toda
+ * la atención en el mensaje de éxito. La celebración del logro del usuario es el único objetivo.
+ * 2.  Acción Singular y Prioritaria: En lugar de múltiples opciones, se presenta un único y claro
+ * Call-To-Action ("Comenzar Configuración"). Esto elimina la parálisis por análisis y guía al
+ * usuario hacia el siguiente paso más lógico y productivo.
+ * 3.  Control del Usuario: Se elimina la redirección automática. El usuario decide cuándo avanzar,
+ * creando una experiencia menos apresurada y más respetuosa.
+ * 4.  Diseño Inmersivo y de Refuerzo: El layout de dos paneles se utiliza para separar la confirmación
+ * de la bienvenida. El panel derecho refuerza el valor de la decisión tomada, construyendo una
+ * conexión emocional y combatiendo cualquier posible remordimiento de comprador.
+ */
+function PaymentSuccessPage() {
+    const { darkMode } = useThemeContext();
+    const navigate = useNavigate();
+    const location = useLocation();
 
-  // Estado para controlar el FAQ desplegable (Se mantiene)
-  const [expandedFAQ, setExpandedFAQ] = useState(null);
-  const toggleFAQ = (index) => {
-    setExpandedFAQ(expandedFAQ === index ? null : index);
-  };
+    // Obtenemos los datos del plan desde el estado de la navegación, con un fallback para diseño.
+    const { planName = 'Plan Pro Anual' } = location.state || {};
+    
+    // --- Lógica de la UI simplificada. Sin redirecciones automáticas ---
 
-  // Estado para mensaje de redirección (Se mantiene)
-  const [redirectMessage, setRedirectMessage] = useState('');
+    return (
+        <div className={`min-h-screen font-sans ${darkMode ? 'dark bg-slate-900' : 'bg-white'}`}>
+            <div className="grid lg:grid-cols-2 min-h-screen">
+                
+                {/* --- Panel Izquierdo: Confirmación y Acción --- */}
+                <div className="flex flex-col justify-center items-center p-6 sm:p-12">
+                    <motion.div
+                        className="w-full max-w-md text-center"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+                    >
+                        <motion.div
+                            initial={{ scale: 0 }}
+                            animate={{ scale: 1 }}
+                            transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.2 }}
+                        >
+                            <CheckBadgeIcon className="w-28 h-28 text-green-500 mx-auto mb-6" />
+                        </motion.div>
+                        
+                        <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white">
+                            ¡Bienvenido a NextManager!
+                        </h1>
+                        <p className="mt-4 text-lg text-gray-600 dark:text-gray-400">
+                            Felicidades. Tu <strong className="text-gray-800 dark:text-white">{planName}</strong> ha sido activado.
+                            Estás listo para llevar tu negocio al siguiente nivel.
+                        </p>
 
-  // --- useEffect Corregido ---
-  // Se ejecuta solo una vez cuando el componente se monta después de la redirección de MP
-  useEffect(() => {
-    // 1. Opcional: Leer query params (solo si necesitas mostrar algo como el ID)
-    const queryParams = new URLSearchParams(location.search);
-    const purchaseId = queryParams.get('purchaseId'); // Podrías usarlo para mostrar "Referencia: X"
-    const status = queryParams.get('status'); // Ya sabemos que es 'approved' o 'success' si estamos aquí
+                        <div className="mt-10">
+                            <button
+                                onClick={() => navigate('/restaurant-config')}
+                                className="w-full py-4 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all duration-300 transform hover:-translate-y-1"
+                            >
+                                <RocketLaunchIcon className="w-6 h-6" />
+                                Comenzar Configuración
+                            </button>
+                        </div>
 
-    console.log('PaymentSuccess Page Loaded. Status:', status, 'Purchase ID:', purchaseId);
+                        <div className="mt-6 text-sm">
+                            <Link to="/dashboard" className="text-gray-500 dark:text-gray-400 hover:underline">
+                                O saltar e ir a mi dashboard
+                            </Link>
+                        </div>
+                    </motion.div>
+                </div>
 
-    // 2. Mostrar notificación de éxito al usuario
-    toast.success("¡Pago completado exitosamente! Tu plan está activo.", { delay: 500 });
+                {/* --- Panel Derecho: Mensaje de Bienvenida y Valor --- */}
+                <div className="hidden lg:block relative bg-slate-800">
+                    <div 
+                        className="absolute inset-0 bg-cover bg-center opacity-10"
+                        style={{ backgroundImage: "url('https://images.unsplash.com/photo-1600880292210-f75bb6fe84f2?q=80&w=1974&auto=format&fit=crop')" }}
+                    ></div>
+                    <div className="relative h-full flex flex-col justify-center p-12 text-white">
+                        <div className="w-full max-w-md">
+                             <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 0.7, delay: 0.5, ease: "easeOut" }}
+                            >
+                                <h2 className="text-4xl font-bold leading-tight">
+                                   Tu viaje hacia la eficiencia empieza ahora.
+                                </h2>
+                                <p className="mt-4 text-xl text-slate-300">
+                                    Has tomado una decisión inteligente. Con las herramientas que acabas de desbloquear, podrás ahorrar tiempo, optimizar tus finanzas y enfocarte en lo que más importa: tus clientes.
+                                </p>
+                                <div className="mt-8 border-t border-slate-700 pt-8">
+                                    <p className="font-semibold">¿Necesitas ayuda para empezar?</p>
+                                    <Link to="/help-center" className="flex items-center gap-2 mt-2 text-blue-400 hover:text-blue-300 transition-colors">
+                                        <span>Visita nuestro Centro de Ayuda</span>
+                                        <ArrowRightIcon className="w-4 h-4"/>
+                                    </Link>
+                                </div>
+                            </motion.div>
+                        </div>
+                    </div>
+                </div>
 
-    // 3. Iniciar redirección automática después de un tiempo
-    setRedirectMessage('Serás redirigido en breve para configurar tu restaurante...');
-    const timer = setTimeout(() => {
-      console.log('PaymentSuccess: Redirigiendo a /restaurantconfig...');
-      navigate('/restaurantconfig', { replace: true }); // Redirige a la configuración
-    }, 4500); // Espera 4.5 segundos
-
-    // 4. Limpiar el timer al desmontar
-    return () => clearTimeout(timer);
-
-    // No necesitamos llamar a ninguna API desde aquí.
-  }, [navigate, location.search]); // Dependencias: navigate y location.search (para reaccionar si cambia la URL)
-  // --- Fin useEffect Corregido ---
-
-  // --- Renderizado JSX (Mantenemos tu estructura UI/UX) ---
-  return (
-    <div
-      className={`
-        min-h-screen
-        ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-black'}
-        py-12 px-4 font-sans
-      `}
-    >
-      <div className="container mx-auto max-w-4xl">
-        {/* Main Success Card */}
-        <div
-          className={`
-            relative rounded-2xl shadow-2xl overflow-hidden mb-12
-            transform transition-all duration-300 hover:scale-105
-            ${darkMode
-              ? 'bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700'
-              : 'bg-white border border-gray-200'}
-          `}
-        >
-          <div className="absolute top-0 left-0 right-0 h-2 bg-gradient-to-r from-blue-600 to-purple-600" />
-          <div className="p-8 text-center">
-            <div className="relative inline-block mb-6">
-              <CheckCircleIcon className="w-24 h-24 mx-auto mb-4 text-green-500 animate-bounce" />
-              <SparklesIcon className="absolute top-0 right-0 w-12 h-12 text-blue-400 animate-pulse" />
-              <SparklesIcon className="absolute bottom-0 left-0 w-12 h-12 text-blue-400 animate-pulse" />
             </div>
-
-            <h2 className="text-4xl font-extrabold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              ¡Pago Exitoso!
-            </h2>
-            <p className="text-xl mb-8 text-gray-600 dark:text-gray-400">
-              Gracias por confiar en nosotros. Tu plan ha sido activado correctamente.
-            </p>
-
-            {/* Next Steps Cards */}
-            <div className="grid md:grid-cols-2 gap-6 mb-8">
-              <div className={`p-6 rounded-xl ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                <RocketIcon className="w-12 h-12 mb-4 text-blue-600 mx-auto" />
-                <h3 className="text-lg font-bold mb-2">Configura tu Restaurante</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  Personaliza tu perfil y configura los detalles de tu negocio.
-                </p>
-                <button
-                  onClick={() => navigate('/restaurantconfig')}
-                  className={`w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center`}
-                >
-                  Comenzar Configuración
-                  <ArrowRightIcon className="w-5 h-5 ml-2" />
-                </button>
-              </div>
-
-              <div className={`p-6 rounded-xl ${darkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                <FileTextIcon className="w-12 h-12 mb-4 text-blue-600 mx-auto" />
-                <h3 className="text-lg font-bold mb-2">Revisa tu Documentación</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                  Accede a tus documentos de compra y facturación.
-                </p>
-                <button
-                  onClick={() => navigate('/documents')} // Asegúrate que esta ruta exista o cámbiala
-                  className={`w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg hover:from-blue-700 hover:to-purple-700 transition-all duration-300 transform hover:scale-105 flex items-center justify-center`}
-                >
-                  Ver Documentos
-                  <ArrowRightIcon className="w-5 h-5 ml-2" />
-                </button>
-              </div>
-            </div>
-
-            {/* Mensaje de redirección */}
-            {redirectMessage && (
-              <div className="mt-4 text-sm text-center text-gray-700 dark:text-gray-300 animate-pulse">
-                {redirectMessage}
-              </div>
-            )}
-          </div>
         </div>
-
-        {/* Support Section */}
-        <div className="text-center mb-12">
-          <h3 className="text-2xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Estamos para Ayudarte
-          </h3>
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              { icon: PhoneIcon, title: 'Soporte Telefónico', description: 'Llámanos al 800-123-4567'},
-              { icon: MailIcon, title: 'Correo Electrónico', description: 'soporte@nextmanager.com.mx'}, // Cambia a tu email
-              { icon: RocketIcon, title: 'Centro de Ayuda', description: 'Consulta nuestra documentación'},
-            ].map((support) => (
-              <div key={support.title} className={`p-6 rounded-xl shadow-lg transform transition-all duration-300 hover:scale-105 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                <support.icon className="w-12 h-12 mb-4 text-blue-600 mx-auto" />
-                <h4 className="text-lg font-bold mb-2">{support.title}</h4>
-                <p className="text-gray-600 dark:text-gray-400">{support.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* FAQ Section */}
-        <div className="max-w-2xl mx-auto">
-          <h3 className="text-2xl font-bold mb-6 text-center bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Preguntas Frecuentes
-          </h3>
-          <div className="space-y-4">
-            {[
-              { question: '¿Cuándo puedo empezar a usar mi plan?', answer: 'Tu plan está activo inmediatamente. Serás redirigido en breve para configurar tu restaurante.'},
-              { question: '¿Dónde encuentro mi factura de compra?', answer: 'Tu factura será enviada al correo electrónico registrado y también estará disponible en la sección de documentos (próximamente).'},
-              { question: '¿Necesito hacer algo más para activar mi cuenta?', answer: 'No, tu cuenta y plan están activos. El siguiente paso es configurar tu restaurante.'},
-            ].map((faq, index) => (
-              <div key={faq.question} className={`border ${darkMode ? 'border-gray-700' : 'border-gray-200'} rounded-lg overflow-hidden`}>
-                <button onClick={() => toggleFAQ(index)} className="w-full flex justify-between items-center text-left p-4 hover:bg-gray-100 dark:hover:bg-gray-800">
-                  <span className="font-semibold">{faq.question}</span>
-                  <ChevronDownIcon className={`w-5 h-5 text-blue-600 transition-transform ${expandedFAQ === index ? 'rotate-180' : ''}`} />
-                </button>
-                {expandedFAQ === index && (
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800">
-                    <p className="text-gray-600 dark:text-gray-400">{faq.answer}</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-      {/* Asegúrate de tener ToastContainer en App.js o aquí */}
-      {/* <ToastContainer /> */}
-    </div>
-  );
+    );
 }
 
-export default PaymentSuccess;
+export default PaymentSuccessPage;
