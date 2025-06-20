@@ -1,259 +1,214 @@
-import React, { useContext, useState } from 'react';
+// src/pages/PlanSelection.js
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
-import { 
-  CheckIcon, 
-  ChevronDownIcon, 
-  StarIcon, 
-  CreditCardIcon, 
-  TrendingUpIcon 
-} from 'lucide-react';
+import { CheckIcon, PlusIcon, MinusIcon } from '@heroicons/react/24/solid';
 
-function PlanSelection() {
-  const [activeSection, setActiveSection] = useState('individual');
-  const { darkMode } = useThemeContext();
-  const navigate = useNavigate();
-  const [expandedFAQ, setExpandedFAQ] = useState(null);
-
-  const toggleFAQ = (index) => {
-    setExpandedFAQ(expandedFAQ === index ? null : index);
-  };
-
-  const plans = {
-    individual: [
-      {
-        product: 'NEXFACTURA',
-        options: [
-          { name: 'Plan Mensual', price: 450, period: 'mes', savings: null },
-          { name: 'Plan Semestral', price: 2300, period: 'semestre', savings: 400 },
-          { name: 'Plan Anual', price: 4150, period: 'año', savings: null },
-        ],
-      },
-      {
-        product: 'NEXTMANAGER',
-        options: [
-          { name: 'Plan Mensual', price: 430, period: 'mes', savings: null },
-          { name: 'Plan Semestral', price: 2200, period: 'semestre', savings: 380 },
-          { name: 'Plan Anual', price: 3950, period: 'año', savings: null },
-        ],
-      },
+// --- ESTRUCTURA DE DATOS REFACTORIZADA Y SIMPLIFICADA ---
+const plansData = [
+  {
+    id: 'nexfactura',
+    name: 'NexFactura',
+    description: 'Ideal para quienes solo necesitan facturación automática y eficiente.',
+    price: { monthly: 450, annually: 4150 },
+    features: [
+      'Facturación automática desde SoftRestaurant',
+      'Portal de auto-facturación para clientes',
+      'Generación de reportes de facturación',
+      'Soporte estándar por correo',
     ],
-    combined: [
-      {
-        product: 'Paquete Anual Combinado',
-        options: [
-          {
-            name: 'NEXFACTURA + NEXTMANAGER',
-            price: 7500,
-            period: 'año',
-            savings: 600,
-            additionalBenefits: [
-              'Soporte técnico prioritario',
-              'Una sesión de capacitación adicional sin costo',
-            ],
-            recommended: true,
-          },
-        ],
-      },
+    isHighlighted: false,
+  },
+  {
+    id: 'nextmanager_completo',
+    name: 'Paquete Completo',
+    description: 'La solución definitiva. Todo el poder de facturación y gestión en un solo lugar.',
+    price: { monthly: 800, annually: 7500 },
+    features: [
+      'Todo lo de NexFactura',
+      'Dashboard de ventas en tiempo real',
+      'Análisis de tendencias y productos',
+      'Exportación de datos avanzada',
+      'Soporte prioritario 24/7',
+      'Sesión de capacitación incluida',
     ],
-  };
+    isHighlighted: true,
+  },
+  {
+    id: 'nextmanager',
+    name: 'NextManager',
+    description: 'Perfecto para gerentes que buscan análisis y control total de sus ventas.',
+    price: { monthly: 430, annually: 3950 },
+    features: [
+      'Dashboard de ventas en tiempo real',
+      'Análisis de tendencias y productos',
+      'Exportación de datos estándar',
+      'Soporte estándar por correo',
+    ],
+    isHighlighted: false,
+  },
+];
 
-  const handlePlanSelect = (option, product) => {
-    navigate('/payment', {
-      state: {
-        selectedPlan: {
-          product,
-          name: option.name,
-          price: option.price,
-          period: option.period,
-          savings: option.savings,
-          additionalBenefits: option.additionalBenefits || [],
-        },
-      },
-    });
-  };
+const faqData = [
+    { question: '¿Puedo cambiar de plan más adelante?', answer: '¡Por supuesto! Puedes mejorar, bajar o cancelar tu plan en cualquier momento directamente desde tu panel de configuración. Queremos que uses lo que mejor se adapte a ti.' },
+    { question: '¿Qué sucede cuando termina mi periodo de facturación?', answer: 'Tu plan se renovará automáticamente al final de cada ciclo (mensual o anual). Recibirás una notificación por correo antes de cada renovación.' },
+    { question: '¿Hay algún costo de instalación o cargos ocultos?', answer: 'No. Nuestros precios son 100% transparentes. El precio que ves es el precio que pagas, sin sorpresas ni cargos adicionales de configuración.' },
+    { question: '¿Qué métodos de pago aceptan?', answer: 'Aceptamos todas las principales tarjetas de crédito y débito a través de Mercado Pago, nuestra pasarela de pago segura y confiable.' },
+];
 
-  return (
-    <div className={`min-h-screen ${darkMode ? 'bg-gray-900 text-white' : 'bg-gray-50 text-black'} py-12 px-4 font-sans`}>
-      <div className="container mx-auto max-w-6xl text-center">
-        <div className="mb-12">
-          <h2 className="text-4xl font-extrabold mb-4 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Elige tu Plan Perfecto
-          </h2>
-          <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            Soluciones flexibles diseñadas para impulsar el crecimiento de tu negocio
-          </p>
-        </div>
+// --- SUBCOMPONENTES DE UI ---
 
-        {/* Section Selector */}
-        <div className="flex justify-center mb-12">
-          <div className="inline-flex bg-gray-200 dark:bg-gray-700 rounded-full p-1 shadow-inner">
-            {['individual', 'combined'].map((section) => (
-              <button
-                key={section}
-                onClick={() => setActiveSection(section)}
-                className={`px-6 py-3 rounded-full transition-all duration-300 ${
-                  activeSection === section
-                    ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
-                    : 'text-gray-600 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-600'
-                }`}
-              >
-                {section === 'individual' ? 'Planes Individuales' : 'Paquete Combinado'}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Plans Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8 place-items-center">
-          {plans[activeSection].map(({ product, options }) => (
-            <div
-              key={product}
-              className={`w-full h-full relative rounded-2xl shadow-2xl overflow-hidden transform transition-all duration-300 
-                ${darkMode 
-                  ? 'bg-gradient-to-br from-gray-800 to-gray-900 border border-gray-700' 
-                  : 'bg-white border border-gray-200'}
-                hover:scale-105 hover:shadow-2xl`}
-            >
-              <div className="p-8 relative">
-                {options.some(option => option.recommended) && (
-                  <div className="absolute top-0 right-0 m-4 flex items-center bg-yellow-400 text-black px-3 py-1 rounded-full text-sm font-semibold">
-                    <StarIcon className="w-4 h-4 mr-1" />
-                    Recomendado
-                  </div>
-                )}
-                <h3 className="text-2xl font-bold mb-6 text-center">{product}</h3>
-                {options.map((option) => (
-                  <div 
-                    key={option.name} 
-                    className={`mb-6 p-4 rounded-lg transition-colors ${
-                      darkMode 
-                        ? 'bg-gray-700 hover:bg-gray-600' 
-                        : 'bg-gray-100 hover:bg-gray-200'
-                    }`}
-                  >
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="text-lg font-semibold">{option.name}</span>
-                      <span className="text-2xl font-bold text-blue-600">
-                        ${option.price.toLocaleString()} 
-                        <span className="text-sm ml-1 text-gray-500">/{option.period}</span>
-                      </span>
-                    </div>
-                    {option.savings && (
-                      <div className="text-green-600 text-sm flex items-center mb-3">
-                        <TrendingUpIcon className="w-4 h-4 mr-2" />
-                        Ahorro: ${option.savings.toLocaleString()} MXN
-                      </div>
-                    )}
-                    {option.additionalBenefits && (
-                      <ul className="mt-2 space-y-2">
-                        {option.additionalBenefits.map((benefit) => (
-                          <li 
-                            key={benefit} 
-                            className="flex items-center text-sm text-gray-600 dark:text-gray-300"
-                          >
-                            <CheckIcon className="w-4 h-4 mr-2 text-green-500" />
-                            {benefit}
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                    <button
-                      onClick={() => handlePlanSelect(option, product)}
-                      className="mt-4 w-full bg-gradient-to-r from-blue-600 to-purple-600 text-white py-3 rounded-lg 
-                        hover:from-blue-700 hover:to-purple-700 transition-all duration-300 
-                        transform hover:scale-105 flex items-center justify-center"
-                    >
-                      <CreditCardIcon className="w-5 h-5 mr-2" />
-                      Seleccionar Plan
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Benefits Section */}
-        <div className="mt-16 grid md:grid-cols-3 gap-8">
-          {[
-            {
-              icon: TrendingUpIcon,
-              title: 'Flexibilidad',
-              description: 'Comience con un plan mensual o semestral, y evolucione de acuerdo con las necesidades de su negocio.',
-            },
-            {
-              icon: CreditCardIcon,
-              title: 'Ahorro Significativo',
-              description: 'Los planes anuales y combinados ofrecen precios con descuento que le permiten ahorrar y obtener el mayor valor.',
-            },
-            {
-              icon: CheckIcon,
-              title: 'Soporte Total',
-              description: 'Con cualquiera de nuestros planes, garantizamos soporte técnico y asistencia continua.',
-            },
-          ].map((benefit) => (
-            <div
-              key={benefit.title}
-              className={`p-6 rounded-2xl shadow-lg transform transition-all duration-300 hover:scale-105 flex flex-col items-center text-center
-                ${darkMode ? 'bg-gray-800 text-gray-200' : 'bg-white text-gray-800'}`}
-            >
-              <benefit.icon className="w-12 h-12 mb-4 text-blue-600" />
-              <h4 className="text-xl font-bold mb-3">{benefit.title}</h4>
-              <p className="text-gray-600 dark:text-gray-400">{benefit.description}</p>
-            </div>
-          ))}
-        </div>
-
-        {/* FAQ Section */}
-        <div className="mt-16 max-w-4xl mx-auto">
-          <h3 className="text-3xl font-bold mb-8 bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-            Preguntas Frecuentes
-          </h3>
-          <div className="space-y-4">
-            {[
-              {
-                question: '¿Puedo cambiar de plan en cualquier momento?',
-                answer: 'Sí, puede actualizar o bajar su plan en cualquier momento desde su panel de usuario.',
-              },
-              {
-                question: '¿Qué métodos de pago aceptan?',
-                answer: 'Aceptamos tarjetas de crédito, débito y pagos a través de Mercado Pago.',
-              },
-              {
-                question: '¿Hay algún cargo adicional?',
-                answer: 'No, todos los costos están claramente especificados en los planes.',
-              },
-            ].map((faq, index) => (
-              <div
-                key={faq.question}
-                className={`border-b ${
-                  darkMode ? 'border-gray-700' : 'border-gray-300'
-                } overflow-hidden`}
-              >
-                <button
-                  onClick={() => toggleFAQ(index)}
-                  className="w-full flex justify-between items-center text-left py-4 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg px-4 transition-colors"
-                >
-                  <span className="font-semibold text-lg">{faq.question}</span>
-                  <ChevronDownIcon
-                    className={`w-6 h-6 text-blue-600 transition-transform ${
-                      expandedFAQ === index ? 'rotate-180' : ''
-                    }`}
-                  />
-                </button>
-                {expandedFAQ === index && (
-                  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-b-lg">
-                    <p className="text-gray-600 dark:text-gray-400">{faq.answer}</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+const BillingToggle = ({ billingCycle, setBillingCycle }) => (
+    <div className="inline-flex items-center p-1 bg-gray-200 dark:bg-slate-800 rounded-full">
+        <button onClick={() => setBillingCycle('monthly')} className={`px-6 py-2 rounded-full text-sm font-semibold transition-colors ${billingCycle === 'monthly' ? 'bg-white dark:bg-slate-700 shadow' : 'text-gray-600 dark:text-slate-400'}`}>
+            Mensual
+        </button>
+        <button onClick={() => setBillingCycle('annually')} className={`px-6 py-2 rounded-full text-sm font-semibold transition-colors relative ${billingCycle === 'annually' ? 'bg-white dark:bg-slate-700 shadow' : 'text-gray-600 dark:text-slate-400'}`}>
+            Anual
+            <span className="absolute -top-2 -right-2 inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white transform translate-x-1/2 -translate-y-1/2 bg-green-500 rounded-full">AHORRA 15%</span>
+        </button>
     </div>
-  );
+);
+
+const FaqItem = ({ faq, isOpen, onClick }) => (
+    <div className="border-b border-gray-200 dark:border-slate-700 py-4">
+        <button onClick={onClick} className="w-full flex justify-between items-center text-left">
+            <span className="text-lg font-medium text-gray-800 dark:text-slate-200">{faq.question}</span>
+            {isOpen ? <MinusIcon className="w-5 h-5 text-blue-500" /> : <PlusIcon className="w-5 h-5 text-gray-500" />}
+        </button>
+        <AnimatePresence>
+            {isOpen && (
+                <motion.div
+                    initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                    animate={{ height: 'auto', opacity: 1, marginTop: '16px' }}
+                    exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                >
+                    <p className="text-gray-600 dark:text-slate-400 pr-8">{faq.answer}</p>
+                </motion.div>
+            )}
+        </AnimatePresence>
+    </div>
+);
+
+
+/**
+ * PlanSelection - Rediseñada para máxima claridad, comparación y conversión.
+ * * Estrategia de UX/UI:
+ * 1.  Comparación Directa Lado a Lado: Se elimina el toggle "Individual/Combinado" y se presentan los
+ * 3 planes principales en columnas. Esto permite al usuario comparar valor y características al instante.
+ * 2.  Control de Precios Simplificado: Un único interruptor "Mensual/Anual" controla todos los precios,
+ * reduciendo la carga cognitiva y destacando claramente la oferta de ahorro anual.
+ * 3.  Valor Integrado: Las características de cada plan están listadas dentro de su tarjeta, conectando
+ * directamente el precio con los beneficios que el usuario recibe.
+ * 4.  Jerarquía Visual Clara: El plan recomendado ("Paquete Completo") se destaca visualmente con un
+ * borde y una insignia, guiando suavemente al usuario hacia la opción de mayor valor.
+ */
+function PlanSelection() {
+    const { darkMode } = useThemeContext();
+    const navigate = useNavigate();
+    const [billingCycle, setBillingCycle] = useState('annually');
+    const [expandedFAQ, setExpandedFAQ] = useState(null);
+
+    const handlePlanSelect = (plan) => {
+        const selectedOption = {
+            product: plan.name,
+            name: `Plan ${billingCycle === 'monthly' ? 'Mensual' : 'Anual'}`,
+            price: plan.price[billingCycle],
+            period: billingCycle,
+            features: plan.features,
+        };
+        navigate('/payment', { state: { selectedPlan: selectedOption } });
+    };
+
+    return (
+        <div className={`min-h-screen ${darkMode ? 'bg-slate-900 text-white' : 'bg-gray-50 text-black'} py-16 sm:py-24 px-4 font-sans`}>
+            <div className="container mx-auto max-w-7xl">
+                {/* --- Encabezado y Toggle --- */}
+                <div className="text-center mb-12">
+                    <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                        Precios transparentes, sin sorpresas.
+                    </h1>
+                    <p className="mt-4 text-lg text-gray-600 dark:text-slate-400 max-w-2xl mx-auto">
+                        Elige el plan que se adapte al ritmo de tu negocio. Escala cuando lo necesites.
+                    </p>
+                    <div className="mt-8">
+                        <BillingToggle billingCycle={billingCycle} setBillingCycle={setBillingCycle} />
+                    </div>
+                </div>
+
+                {/* --- Tabla de Precios --- */}
+                <div className="grid lg:grid-cols-3 gap-8 items-start">
+                    {plansData.map((plan) => (
+                        <motion.div
+                            key={plan.id}
+                            className={`w-full rounded-2xl p-8 border transition-all duration-300 ${
+                                plan.isHighlighted
+                                    ? 'border-2 border-blue-500 shadow-2xl bg-white dark:bg-slate-800'
+                                    : 'border-gray-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/30'
+                            }`}
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: plan.isHighlighted ? 0 : 0.1 }}
+                        >
+                            {plan.isHighlighted && (
+                                <div className="text-center mb-4">
+                                    <span className="inline-block bg-blue-500 text-white text-xs font-semibold px-3 py-1 rounded-full">MÁS POPULAR</span>
+                                </div>
+                            )}
+                            <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white">{plan.name}</h2>
+                            <p className="text-sm text-center text-gray-500 dark:text-slate-400 mt-2 h-10">{plan.description}</p>
+                            
+                            <div className="text-center my-8">
+                                <span className="text-5xl font-extrabold text-gray-900 dark:text-white">
+                                    ${(plan.price[billingCycle] / (billingCycle === 'annually' ? 12 : 1)).toFixed(0)}
+                                </span>
+                                <span className="text-lg text-gray-500 dark:text-slate-400">/mes</span>
+                                {billingCycle === 'annually' && <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Facturado anualmente por ${plan.price.annually}</p>}
+                            </div>
+
+                            <button
+                                onClick={() => handlePlanSelect(plan)}
+                                className={`w-full py-3 rounded-lg font-semibold transition-colors ${
+                                    plan.isHighlighted
+                                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                        : 'bg-white dark:bg-slate-700 text-blue-600 dark:text-white ring-1 ring-blue-500 hover:bg-blue-50 dark:hover:bg-slate-600'
+                                }`}
+                            >
+                                Elegir Plan
+                            </button>
+
+                            <ul className="mt-8 space-y-4 text-sm">
+                                {plan.features.map((feature) => (
+                                    <li key={feature} className="flex items-start">
+                                        <CheckIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                                        <span className="text-gray-700 dark:text-slate-300">{feature}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </motion.div>
+                    ))}
+                </div>
+
+                {/* --- Sección de FAQ --- */}
+                <div className="mt-24 max-w-4xl mx-auto">
+                    <h2 className="text-3xl font-bold text-center mb-8 text-gray-900 dark:text-white">Dudas Comunes Sobre los Planes</h2>
+                    <div className="space-y-2">
+                        {faqData.map((faq, index) => (
+                            <FaqItem
+                                key={index}
+                                faq={faq}
+                                isOpen={expandedFAQ === index}
+                                onClick={() => setExpandedFAQ(expandedFAQ === index ? null : index)}
+                            />
+                        ))}
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    );
 }
 
 export default PlanSelection;
