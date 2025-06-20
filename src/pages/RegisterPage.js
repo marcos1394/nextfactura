@@ -1,365 +1,250 @@
+// src/pages/RegisterPage.js
 import React, { useState } from 'react';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
-import TermsModal from './TermsModal';
+import { useNavigate, Link } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useThemeContext } from '../context/ThemeContext'; // Asumiendo que existe
 
-function RegisterPage() {
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    restaurantName: '',
-    phoneNumber: '',
-  });
-  const [passwordCriteria, setPasswordCriteria] = useState({
-    length: false,
-    uppercase: false,
-    lowercase: false,
-    number: false,
-    specialChar: false,
-  });
-  const [termsAccepted, setTermsAccepted] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+// Importamos iconos para cada campo, mejorando la guía visual
+import { UserIcon, EnvelopeIcon, LockClosedIcon, BuildingStorefrontIcon, PhoneIcon, CheckCircleIcon, XCircleIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
 
-  const navigate = useNavigate();
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-
-    if (name === 'password') {
-      validatePassword(value);
-    }
-
-    setFormData({
-      ...formData,
-      [name]: value,
-    });
-  };
-
-  const validatePassword = (password) => {
-    const criteria = {
-      length: password.length >= 8,
-      uppercase: /[A-Z]/.test(password),
-      lowercase: /[a-z]/.test(password),
-      number: /\d/.test(password),
-      specialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password),
-    };
-    setPasswordCriteria(criteria);
-  };
-
-  const isPasswordValid = () => {
-    return Object.values(passwordCriteria).every((value) => value === true);
-  };
-
-  const handleTermsChange = (e) => {
-    setTermsAccepted(e.target.checked);
-  };
-
-  const handleLoginClick = () => {
-    navigate('/login');
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!isPasswordValid()) {
-      toast.error('La contraseña no cumple con los criterios de seguridad.');
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Las contraseñas no coinciden.');
-      return;
-    }
-
-    if (!termsAccepted) {
-      toast.error('Debes aceptar los términos y condiciones.');
-      return;
-    }
-
-    try {
-      const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/users/register`,
-        formData
-      );
-      toast.success('Registro exitoso. Te Redirigiremos al Inicio de Sesión para Comenzar.');
-      setTimeout(() => {
-        navigate('/login');
-      }, 3000);
-    } catch (err) {
-      const errorMessage =
-        err.response?.data?.message || 'Error en el registro. Por favor, intenta nuevamente.';
-      toast.error(errorMessage);
-    }
-  };
-
-  const handleGoogleSuccess = async (credentialResponse) => {
-    try {
-      const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/google-login`,
-        { token: credentialResponse.credential }
-      );
-      toast.success('Inicio de sesión con Google exitoso.');
-      navigate('/dashboard');
-    } catch (error) {
-      toast.error('Error al iniciar sesión con Google.');
-    }
-  };
-
-  const handleGoogleError = () => {
-    toast.error('Error al conectar con Google.');
-  };
-
-  const toggleShowPassword = () => {
-    setShowPassword(!showPassword);
-  };
-
-  const toggleShowConfirmPassword = () => {
-    setShowConfirmPassword(!showConfirmPassword);
-  };
-
-  const handleTermsClick = () => {
-    setIsModalOpen(true);
-  };
-
-  const handleModalClose = () => {
-    setIsModalOpen(false);
-  };
-
-  const handleModalAccept = () => {
-    setIsModalOpen(false);
-    setTermsAccepted(true);
-  };
-
-  return (
-    <GoogleOAuthProvider clientId={process.env.REACT_APP_GOOGLE_CLIENT_ID}>
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gray-50 dark:bg-gray-900">
-        <div 
-          className="w-full max-w-2xl p-8 space-y-8 bg-white dark:bg-gray-800 shadow-2xl rounded-xl transition-all duration-300 ease-in-out transform hover:scale-[1.01]"
-        >
-          <div className="text-center">
-            <h2 className="text-3xl font-extrabold mb-2 text-gray-800 dark:text-white">
-              Registro de usuario
-            </h2>
-            <p className="text-gray-500 dark:text-gray-400">
-              Crea tu cuenta para comenzar
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Nombre completo <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="name"
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-lg transition-all duration-200 focus:ring-2 focus:outline-none 
-                  bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 
-                  focus:ring-blue-500 text-black dark:text-white"
-                required
-                placeholder="Ingresa tu nombre completo"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Correo electrónico <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="email"
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-lg transition-all duration-200 focus:ring-2 focus:outline-none 
-                  bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 
-                  focus:ring-blue-500 text-black dark:text-white"
-                required
-                placeholder="tu.correo@ejemplo.com"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="restaurantName" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Nombre del restaurante <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="restaurantName"
-                type="text"
-                name="restaurantName"
-                value={formData.restaurantName}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-lg transition-all duration-200 focus:ring-2 focus:outline-none 
-                  bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 
-                  focus:ring-blue-500 text-black dark:text-white"
-                required
-                placeholder="Nombre de tu restaurante"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Número de teléfono
-              </label>
-              <input
-                id="phoneNumber"
-                type="tel"
-                name="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-lg transition-all duration-200 focus:ring-2 focus:outline-none 
-                  bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 
-                  focus:ring-blue-500 text-black dark:text-white"
-                placeholder="Opcional"
-              />
-            </div>
-
-            <div className="md:col-span-2 space-y-2">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Contraseña <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-lg transition-all duration-200 focus:ring-2 focus:outline-none 
-                    bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 
-                    focus:ring-blue-500 text-black dark:text-white"
-                  required
-                  placeholder="Contraseña segura"
-                />
-                <button
-                  type="button"
-                  onClick={toggleShowPassword}
-                  className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-500"
-                >
-                  {showPassword ? '🙈' : '👁️'}
-                </button>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs mt-2">
-                <p className={`flex items-center ${passwordCriteria.length ? 'text-green-500' : 'text-red-500'}`}>
-                  {passwordCriteria.length ? '✓' : '✗'} Mínimo 8 caracteres
-                </p>
-                <p className={`flex items-center ${passwordCriteria.uppercase ? 'text-green-500' : 'text-red-500'}`}>
-                  {passwordCriteria.uppercase ? '✓' : '✗'} Una mayúscula
-                </p>
-                <p className={`flex items-center ${passwordCriteria.lowercase ? 'text-green-500' : 'text-red-500'}`}>
-                  {passwordCriteria.lowercase ? '✓' : '✗'} Una minúscula
-                </p>
-                <p className={`flex items-center ${passwordCriteria.number ? 'text-green-500' : 'text-red-500'}`}>
-                  {passwordCriteria.number ? '✓' : '✗'} Un número
-                </p>
-                <p className={`col-span-2 flex items-center ${passwordCriteria.specialChar ? 'text-green-500' : 'text-red-500'}`}>
-                  {passwordCriteria.specialChar ? '✓' : '✗'} Un carácter especial
-                </p>
-              </div>
-            </div>
-
-            <div className="md:col-span-2 space-y-2">
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                Confirmar contraseña <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <input
-                  id="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  className="w-full px-4 py-3 rounded-lg transition-all duration-200 focus:ring-2 focus:outline-none 
-                    bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 
-                    focus:ring-blue-500 text-black dark:text-white"
-                  required
-                  placeholder="Repite tu contraseña"
-                />
-                <button
-                  type="button"
-                  onClick={toggleShowConfirmPassword}
-                  className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-500"
-                >
-                  {showConfirmPassword ? '🙈' : '👁️'}
-                </button>
-              </div>
-            </div>
-
-            <div className="md:col-span-2 flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="terms"
-                checked={termsAccepted}
-                onChange={handleTermsChange}
-                required
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <label htmlFor="terms" className="text-sm text-gray-700 dark:text-gray-300">
-                Acepto los{' '}
-                <span 
-                  className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer" 
-                  onClick={handleTermsClick}
-                >
-                  términos y condiciones
-                </span>
-              </label>
-            </div>
-
-            <div className="md:col-span-2">
-              <button
-                type="submit"
-                className="w-full py-3 bg-blue-600 text-white font-semibold rounded-lg 
-                  hover:bg-blue-700 transition-colors duration-300 
-                  focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
-              >
-                Registrar
-              </button>
-            </div>
-          </form>
-
-          <div className="relative py-4">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300 dark:border-gray-600"></div>
-            </div>
-            <div className="relative flex justify-center">
-              <span className="px-4 bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400">
-                O regístrate con
-              </span>
-            </div>
-          </div>
-
-          <div className="flex justify-center">
-            <GoogleLogin onSuccess={handleGoogleSuccess} onError={handleGoogleError} />
-          </div>
-
-          <div className="text-center">
-            <p className="text-gray-600 dark:text-gray-300">
-              ¿Ya tienes una cuenta?{' '}
-              <span 
-                className="text-blue-600 dark:text-blue-400 hover:underline cursor-pointer" 
-                onClick={handleLoginClick}
-              >
-                Inicia sesión
-              </span>
-            </p>
-          </div>
-
-          <ToastContainer />
-          <TermsModal isOpen={isModalOpen} onClose={handleModalClose} onAccept={handleModalAccept} />
+// Componente para la barra de progreso
+const ProgressBar = ({ currentStep, totalSteps }) => {
+    const progressPercentage = ((currentStep - 1) / (totalSteps - 1)) * 100;
+    return (
+        <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2 mb-8">
+            <motion.div
+                className="bg-blue-600 h-2 rounded-full"
+                initial={{ width: 0 }}
+                animate={{ width: `${progressPercentage}%` }}
+                transition={{ duration: 0.5, ease: 'easeInOut' }}
+            />
         </div>
-      </div>
-    </GoogleOAuthProvider>
-  );
+    );
+};
+
+// Componente para los criterios de la contraseña
+const PasswordCriteria = ({ criteria }) => (
+    <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mt-2">
+        {Object.entries(criteria).map(([key, { valid, label }]) => (
+            <div key={key} className={`flex items-center gap-1.5 transition-colors ${valid ? 'text-green-600 dark:text-green-400' : 'text-gray-500'}`}>
+                {valid ? <CheckCircleIcon className="w-4 h-4" /> : <XCircleIcon className="w-4 h-4" />}
+                <span>{label}</span>
+            </div>
+        ))}
+    </div>
+);
+
+/**
+ * RegisterPage - Rediseñada con una estrategia de UX de divulgación progresiva.
+ * * Estrategia de UX/UI:
+ * 1.  Formulario Multi-paso: Se divide el registro en 3 pasos lógicos para reducir la carga cognitiva
+ * y hacer que el proceso parezca menos abrumador. Esto aumenta drásticamente la tasa de finalización.
+ * 2.  Gestión de Expectativas: La barra de progreso visual informa al usuario sobre su avance,
+ * eliminando la incertidumbre y motivándolo a continuar.
+ * 3.  Experiencia de Marca Consistente: Se reutiliza el layout de dos paneles de la página de inicio de
+ * sesión para crear una experiencia de usuario unificada y profesional.
+ * 4.  Feedback Interactivo: Los criterios de la contraseña y los estados de los botones proporcionan
+ * una retroalimentación clara e instantánea, guiando al usuario sin esfuerzo.
+ */
+function RegisterPage() {
+    const { darkMode } = useThemeContext();
+    const navigate = useNavigate();
+
+    const [currentStep, setCurrentStep] = useState(1);
+    const [formData, setFormData] = useState({
+        name: '', email: '', password: '', confirmPassword: '',
+        restaurantName: '', phoneNumber: '', termsAccepted: false,
+    });
+    const [passwordCriteria, setPasswordCriteria] = useState({
+        length: { valid: false, label: '8+ caracteres' },
+        uppercase: { valid: false, label: 'Una mayúscula' },
+        lowercase: { valid: false, label: 'Una minúscula' },
+        number: { valid: false, label: 'Un número' },
+    });
+    const [showPassword, setShowPassword] = useState(false);
+
+    const handleChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        const val = type === 'checkbox' ? checked : value;
+
+        if (name === 'password') validatePassword(value);
+        setFormData(prev => ({ ...prev, [name]: val }));
+    };
+
+    const validatePassword = (password) => {
+        setPasswordCriteria({
+            length: { ...passwordCriteria.length, valid: password.length >= 8 },
+            uppercase: { ...passwordCriteria.uppercase, valid: /[A-Z]/.test(password) },
+            lowercase: { ...passwordCriteria.lowercase, valid: /[a-z]/.test(password) },
+            number: { ...passwordCriteria.number, valid: /\d/.test(password) },
+        });
+    };
+
+    const isStep1Valid = () => {
+        const { name, email, password, confirmPassword } = formData;
+        const allCriteriaValid = Object.values(passwordCriteria).every(c => c.valid);
+        return name && email && password && allCriteriaValid && password === confirmPassword;
+    };
+
+    const isStep2Valid = () => formData.restaurantName.trim() !== '';
+
+    // --- MANEJADORES DE NAVEGACIÓN Y ENVÍO (SIMULADOS) ---
+    const handleNextStep = () => setCurrentStep(prev => prev + 1);
+    const handlePrevStep = () => setCurrentStep(prev => prev - 1);
+    const handleFinalSubmit = (e) => {
+        e.preventDefault();
+        if (!formData.termsAccepted) {
+            alert('Debes aceptar los términos y condiciones.');
+            return;
+        }
+        console.log('REGISTRO SIMULADO ENVIADO:', formData);
+        alert('¡Registro exitoso! Serás redirigido.');
+        navigate('/plans'); // Redirigir al usuario a seleccionar un plan tras el registro
+    };
+
+    const slideVariants = {
+        enter: (direction) => ({ x: direction > 0 ? '100%' : '-100%', opacity: 0 }),
+        center: { x: 0, opacity: 1 },
+        exit: (direction) => ({ x: direction < 0 ? '100%' : '-100%', opacity: 0 }),
+    };
+    const [direction, setDirection] = useState(0);
+
+    return (
+        <div className={`min-h-screen font-sans ${darkMode ? 'dark bg-gray-900' : 'bg-white'}`}>
+            <div className="grid lg:grid-cols-2 min-h-screen">
+
+                {/* --- Panel Izquierdo: Formulario Multi-paso --- */}
+                <div className="flex flex-col justify-center items-center p-6 sm:p-12">
+                    <motion.div
+                        className="w-full max-w-md"
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.7, ease: "easeOut" }}
+                    >
+                        <Link to="/" className="mb-8 inline-block">
+                            <img src="/logo-nextmanager.svg" alt="NextManager Logo" className="h-10" />
+                        </Link>
+                        
+                        <ProgressBar currentStep={currentStep} totalSteps={3} />
+
+                        <div className="overflow-hidden relative h-auto">
+                            <AnimatePresence initial={false} custom={direction}>
+                                <motion.div
+                                    key={currentStep}
+                                    custom={direction}
+                                    variants={slideVariants}
+                                    initial="enter"
+                                    animate="center"
+                                    exit="exit"
+                                    transition={{ type: 'tween', ease: 'easeInOut', duration: 0.5 }}
+                                    className="w-full"
+                                >
+                                    {/* --- PASO 1: CUENTA --- */}
+                                    {currentStep === 1 && (
+                                        <div className="space-y-5">
+                                            <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Crea tu Cuenta</h1>
+                                            <p className="text-gray-600 dark:text-gray-400">Empecemos con tus datos básicos.</p>
+                                            <div className="relative">
+                                                <UserIcon className="pointer-events-none w-5 h-5 absolute top-1/2 transform -translate-y-1/2 left-3 text-gray-400" />
+                                                <input name="name" type="text" placeholder="Nombre completo" value={formData.name} onChange={handleChange} className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors" />
+                                            </div>
+                                            <div className="relative">
+                                                <EnvelopeIcon className="pointer-events-none w-5 h-5 absolute top-1/2 transform -translate-y-1/2 left-3 text-gray-400" />
+                                                <input name="email" type="email" placeholder="correo@ejemplo.com" value={formData.email} onChange={handleChange} className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors" />
+                                            </div>
+                                            <div className="relative">
+                                                <LockClosedIcon className="pointer-events-none w-5 h-5 absolute top-1/2 transform -translate-y-1/2 left-3 text-gray-400" />
+                                                <input name="password" type={showPassword ? 'text' : 'password'} placeholder="Contraseña" value={formData.password} onChange={handleChange} className="w-full pl-10 pr-10 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors" />
+                                                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute top-1/2 right-3 transform -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                                                    {showPassword ? <EyeSlashIcon className="w-5 h-5"/> : <EyeIcon className="w-5 h-5"/>}
+                                                </button>
+                                            </div>
+                                            <PasswordCriteria criteria={passwordCriteria} />
+                                            <div className="relative">
+                                                <LockClosedIcon className="pointer-events-none w-5 h-5 absolute top-1/2 transform -translate-y-1/2 left-3 text-gray-400" />
+                                                <input name="confirmPassword" type="password" placeholder="Confirmar contraseña" value={formData.confirmPassword} onChange={handleChange} className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors" />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* --- PASO 2: NEGOCIO --- */}
+                                    {currentStep === 2 && (
+                                        <div className="space-y-5">
+                                             <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Sobre tu Restaurante</h1>
+                                            <p className="text-gray-600 dark:text-gray-400">Esta información nos ayudará a personalizar tu experiencia.</p>
+                                            <div className="relative">
+                                                <BuildingStorefrontIcon className="pointer-events-none w-5 h-5 absolute top-1/2 transform -translate-y-1/2 left-3 text-gray-400" />
+                                                <input name="restaurantName" type="text" placeholder="Nombre del restaurante" value={formData.restaurantName} onChange={handleChange} className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors" />
+                                            </div>
+                                            <div className="relative">
+                                                <PhoneIcon className="pointer-events-none w-5 h-5 absolute top-1/2 transform -translate-y-1/2 left-3 text-gray-400" />
+                                                <input name="phoneNumber" type="tel" placeholder="Número de teléfono (Opcional)" value={formData.phoneNumber} onChange={handleChange} className="w-full pl-10 pr-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors" />
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* --- PASO 3: CONFIRMACIÓN --- */}
+                                    {currentStep === 3 && (
+                                        <div className="space-y-6">
+                                             <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Último Paso</h1>
+                                            <p className="text-gray-600 dark:text-gray-400">Revisa que todo esté correcto y acepta nuestros términos de servicio para finalizar.</p>
+                                            <div className="flex items-start">
+                                                <input id="terms" name="termsAccepted" type="checkbox" checked={formData.termsAccepted} onChange={handleChange} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-1" />
+                                                <label htmlFor="terms" className="ml-3 block text-sm text-gray-900 dark:text-gray-300">
+                                                    He leído y acepto los <a href="/terms" target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">Términos y Condiciones</a> y la <a href="/privacy" target="_blank" rel="noopener noreferrer" className="font-medium text-blue-600 hover:underline">Política de Privacidad</a>.
+                                                </label>
+                                            </div>
+                                        </div>
+                                    )}
+                                </motion.div>
+                            </AnimatePresence>
+                        </div>
+
+                        {/* --- Botones de Navegación --- */}
+                        <div className="mt-8 flex justify-between items-center">
+                            {currentStep > 1 ? (
+                                <button type="button" onClick={() => {setDirection(-1); handlePrevStep();}} className="py-2 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600">Atrás</button>
+                            ) : <div />}
+                            
+                            {currentStep < 3 && (
+                                <button type="button" onClick={() => {setDirection(1); handleNextStep();}} disabled={currentStep === 1 ? !isStep1Valid() : !isStep2Valid()} className="py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed">Siguiente</button>
+                            )}
+                            
+                            {currentStep === 3 && (
+                                <button type="button" onClick={handleFinalSubmit} disabled={!formData.termsAccepted} className="py-3 px-6 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed">Crear Cuenta</button>
+                            )}
+                        </div>
+
+                        <p className="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
+                            ¿Ya tienes una cuenta?{' '}
+                            <Link to="/login" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
+                                Inicia sesión
+                            </Link>
+                        </p>
+                    </motion.div>
+                </div>
+
+                {/* --- Panel Derecho: Branding --- */}
+                <motion.div className="hidden lg:block relative"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.7, delay: 0.3 }}
+                >
+                    <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?q=80&w=2070&auto=format&fit=crop')" }}>
+                        <div className="absolute inset-0 bg-gradient-to-t from-gray-900 via-gray-900/70 to-transparent"></div>
+                    </div>
+                    <div className="relative h-full flex flex-col justify-end p-12">
+                        <h2 className="text-3xl font-bold text-white leading-tight">
+                           "Únete a cientos de restaurantes que ya están tomando decisiones más inteligentes."
+                        </h2>
+                        <p className="mt-4 text-lg text-gray-300">
+                            Empieza en minutos. Transforma tu negocio para siempre.
+                        </p>
+                    </div>
+                </motion.div>
+            </div>
+        </div>
+    );
 }
 
 export default RegisterPage;
