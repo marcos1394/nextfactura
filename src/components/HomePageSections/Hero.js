@@ -1,72 +1,125 @@
 // src/components/HomePageSections/Hero.js
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // <--- Importar useNavigate
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { ArrowRightIcon } from '@heroicons/react/24/solid'; // Icono para el CTA primario
 
-const typingPhrases = [
-  "Automatiza tu facturación con Nextechsolutions", // Podrías usar nextmanager.com.mx aquí? Revisa tu marca
-  "Solución integral para restaurantes",
-  "Conexión perfecta con SoftRestaurant",
-  "Simplifica tu gestión de facturas"
-];
-
+/**
+ * Hero Section - Optimizada para Máximo Impacto y Claridad
+ * * Estrategia de UX/UI:
+ * 1.  Mensaje Principal Único: Se elimina el carrusel de texto para presentar una Propuesta de Valor Única (PVU)
+ * clara y contundente. El usuario capta el beneficio principal al instante.
+ * 2.  Layout Asimétrico Moderno: Se utiliza un grid para separar el texto del área visual. Esto crea un
+ * flujo de lectura natural (izquierda a derecha) y permite mostrar una imagen atractiva del producto en acción.
+ * 3.  Jerarquía de CTAs: El botón principal ("Empieza Gratis") tiene mayor peso visual (color sólido) que el 
+ * secundario ("Ver un Demo"), guiando al usuario hacia la acción de menor fricción.
+ * 4.  Animaciones Sutiles: Las animaciones de entrada son escalonadas y suaves para dar una sensación
+ * premium sin distraer.
+ */
 const Hero = () => {
-  const [activePhrase, setActivePhrase] = useState(0);
-  const navigate = useNavigate(); // <--- Hook para navegación
+  const navigate = useNavigate();
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setActivePhrase((prev) => (prev + 1) % typingPhrases.length);
-    }, 3000); // Cambia cada 3 segundos
-    return () => clearInterval(interval);
-  }, []); // No necesita dependencia activePhrase aquí
+  const handlePrimaryAction = () => {
+    // La acción de menor fricción. Lleva directamente al registro.
+    navigate('/signup'); // Idealmente a una ruta de registro
+  };
 
-  // --- Función para manejar clic en botones CTA ---
-  const handleStartClick = () => {
-    // Navega a una ruta protegida (ej. /dashboard)
-    // Si el usuario no está logueado, Authenticator aparecerá
-    navigate('/dashboard');
+  const handleSecondaryAction = () => {
+    // Acción secundaria. Lleva a una página para agendar una demostración.
+    navigate('/demo'); // Idealmente a una ruta específica de demo
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0 },
+    visible: {
+      opacity: 1,
+      transition: {
+        staggerChildren: 0.2, // Anima los hijos de forma escalonada
+      },
+    },
+  };
+
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6,
+        ease: 'easeOut'
+      },
+    },
   };
 
   return (
-    // Contenedor con el fondo degradado (o puedes moverlo al HomePage si prefieres)
-    <div className="bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 text-gray-900 dark:from-gray-900 dark:to-black dark:text-white transition-all duration-700">
-      <div className="container mx-auto px-4 py-16 min-h-[70vh] flex items-center"> {/* Ajusta altura si es necesario */}
-        {/* Podrías volver a un grid si quieres imagen/video al lado, o mantenerlo centrado */}
-        <div className="max-w-3xl mx-auto text-center space-y-8">
-          <motion.h1
-            key={activePhrase} // key ayuda a framer-motion a detectar el cambio
-            initial={{ opacity: 0, y: -50 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-            className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight" // Ajusta tamaño de fuente
-          >
-            {typingPhrases[activePhrase]}
-          </motion.h1>
-
-          <p className="text-lg sm:text-xl text-gray-800 dark:text-gray-200 max-w-xl mx-auto">
-            Solución completa de facturación electrónica diseñada específicamente para restaurantes que utilizan SoftRestaurant. {/* Revisa si este texto sigue siendo relevante para NextManager */}
-          </p>
-
-          {/* --- Botones CTA Modificados --- */}
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-            <button
-              onClick={handleStartClick} // Llama a la función de navegación
-              className="w-full sm:w-auto bg-white text-blue-600 dark:bg-gray-100 dark:text-gray-900 px-8 py-3 rounded-full font-semibold hover:bg-opacity-90 dark:hover:bg-opacity-80 transition-all duration-300 shadow-lg text-lg"
+    <section className="relative overflow-hidden bg-white dark:bg-gray-900">
+      {/* Fondo de gradiente sutil y abstracto */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-900 dark:to-black"></div>
+      
+      <div className="relative container mx-auto px-6 py-24 lg:py-32 min-h-screen flex items-center">
+        <motion.div
+          className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center"
+          initial="hidden"
+          animate="visible"
+          variants={containerVariants}
+        >
+          {/* --- Columna de Texto --- */}
+          <div className="text-center lg:text-left">
+            <motion.h1
+              variants={itemVariants}
+              className="text-4xl md:text-5xl lg:text-6xl font-extrabold tracking-tighter text-gray-900 dark:text-white"
             >
-              Comenzar Ahora
-            </button>
-            {/* El botón Demo podría ir a otra página o también a /dashboard */}
-            <button
-               onClick={handleStartClick} // O cambiar a navigate('/demo') si tienes esa ruta
-              className="w-full sm:w-auto bg-transparent border-2 border-white text-white px-8 py-3 rounded-full font-semibold hover:bg-white hover:text-blue-600 dark:hover:text-gray-900 transition-all duration-300 text-lg"
+              La gestión de tu restaurante,
+              <span className="block text-blue-600 dark:text-blue-400">simplificada y potente.</span>
+            </motion.h1>
+
+            <motion.p
+              variants={itemVariants}
+              className="mt-6 text-lg md:text-xl text-gray-600 dark:text-gray-300 max-w-lg mx-auto lg:mx-0"
             >
-              Solicitar Demo
-            </button>
+              Automatiza tu facturación, analiza tus ventas y toma el control total. NextManager es la plataforma todo-en-uno que trabaja por ti.
+            </motion.p>
+
+            <motion.div
+              variants={itemVariants}
+              className="mt-10 flex flex-col sm:flex-row items-center justify-center lg:justify-start gap-4"
+            >
+              <button
+                onClick={handlePrimaryAction}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-blue-600 text-white px-8 py-4 rounded-full font-bold text-lg shadow-lg hover:bg-blue-700 transform hover:-translate-y-1 transition-all duration-300"
+              >
+                Empieza Gratis
+                <ArrowRightIcon className="w-5 h-5" />
+              </button>
+              <button
+                onClick={handleSecondaryAction}
+                className="w-full sm:w-auto bg-transparent text-gray-700 dark:text-gray-200 px-8 py-4 rounded-full font-semibold hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-300"
+              >
+                Ver un Demo
+              </button>
+            </motion.div>
           </div>
-        </div>
+
+          {/* --- Columna Visual --- */}
+          <motion.div
+            variants={itemVariants}
+            className="hidden lg:block"
+          >
+            <div className="relative w-full h-96 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-4 border border-gray-200 dark:border-gray-700">
+                {/* ÁREA PARA UN VISUAL DE ALTO IMPACTO:
+                  - Idealmente, aquí va una captura de pantalla del dashboard de NextManager.
+                  - O una animación/video corto mostrando la facilidad de uso.
+                  - O una ilustración 3D que represente gestión, datos y eficiencia.
+                  - Usaremos un placeholder con gradiente por ahora.
+                */}
+                <div className="w-full h-full rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center">
+                   <p className="text-gray-400 dark:text-gray-500 font-medium">[Visual Atractivo del Dashboard de NextManager]</p>
+                </div>
+            </div>
+          </motion.div>
+        </motion.div>
       </div>
-    </div>
+    </section>
   );
 }
 
