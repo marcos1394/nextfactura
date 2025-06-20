@@ -1,420 +1,177 @@
-import React, { useState, useEffect, useContext } from 'react';
-import axios from 'axios';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-import Modal from 'react-modal';
-import { Search, Ticket, Mail, CheckCircle } from 'lucide-react';
+// src/pages/TicketSearch.js
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
+import { TicketIcon, BuildingStorefrontIcon, ArrowRightIcon, CheckBadgeIcon } from '@heroicons/react/24/solid';
+import { DocumentTextIcon, AtSymbolIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 
-Modal.setAppElement('#root');
 
-function TicketSearch() {
-  // 1) Estado local para branding
-  const [branding, setBranding] = useState({
-    name: '',
-    logoUrl: '',
-    primaryColor: '#4f9bed', // color por defecto si no se recibe nada
-    secondaryColor: '#f5f5f5',
-    // Otros campos que gustes
-  });
+// --- MOCK DATA & HELPERS ---
+const mockBrandingData = {
+    name: 'El Sazón Porteño',
+    logoUrl: 'https://tailwindui.com/img/logos/mark.svg?color=white',
+    primaryColor: '#005DAB',
+    secondaryColor: '#F3F4F6'
+};
 
-  // 2) Estado para la lógica de tickets (igual que antes)
-  const [ticketData, setTicketData] = useState({
-    ticketNumber: '',
-    amount: '',
-    date: '',
-  });
-  const [selectedTicket, setSelectedTicket] = useState(null);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [email, setEmail] = useState('');
-  const [loading, setLoading] = useState(false);
+const mockFoundTicket = {
+    id: 'T-84321',
+    amount: 450.00,
+    date: '2025-06-19',
+    items: [
+        { qty: 1, name: 'Tacos de Camarón', price: 150.00 },
+        { qty: 2, name: 'Aguas Frescas', price: 60.00 },
+        { qty: 1, name: 'Guacamole', price: 90.00 },
+    ]
+};
 
-  const { darkMode } = useThemeContext();
-
-  // Detectar subdominio actual
-  const host = window.location.host;
-  const subdomain = host.split('.')[0]; 
-  // Ej: "rest1"
-
-  // 3) useEffect para cargar branding según el subdominio
-  useEffect(() => {
-    // Si subdomain es "www" o es el dominio base, podrías saltar esta carga
-    if (!subdomain || subdomain === 'www' || subdomain === 'nextfactura') return;
-
-    // Llamar a tu backend para obtener los datos de brand
-    // Ajusta la URL según tu endpoint
-    axios
-      .get(`${process.env.REACT_APP_API_URL}/api/restaurants/brand?subdomain=${subdomain}`)
-      .then((res) => {
-        if (res.data.success) {
-          setBranding({
-            name: res.data.data.name,
-            logoUrl: res.data.data.logoUrl,
-            primaryColor: res.data.data.primaryColor,
-            secondaryColor: res.data.data.secondaryColor,
-            // etc...
-          });
-        }
-      })
-      .catch((error) => {
-        console.error('Error cargando branding:', error);
-      });
-  }, [subdomain]);
-
-  // 4) Funciones existentes (handleChange, handleSearch, etc.)
-  const handleChange = (e) => {
-    setTicketData({
-      ...ticketData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleSearch = async () => {
-    // Lógica idéntica a tu código original
-    const { ticketNumber, amount, date } = ticketData;
-
-    if (!ticketNumber || !amount || !date) {
-      toast.error('Por favor, completa todos los campos.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/tickets/search`,
-        { ticketNumber, amount, date },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-          },
-        }
-      );
-
-      if (response.data.success) {
-        setSelectedTicket(response.data.data);
-        toast.success('Ticket encontrado. Puedes proceder a facturar.');
-      } else {
-        setSelectedTicket(null);
-        toast.error('Ticket no encontrado.');
-      }
-    } catch (error) {
-      console.error('Error al buscar el ticket:', error);
-      toast.error('Error al buscar el ticket.');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFacturar = () => {
-    setIsModalOpen(true);
-  };
-
-  const handleModalSubmit = async (e) => {
-    e.preventDefault();
-
-    if (!email) {
-      toast.error('Por favor, ingresa tu correo electrónico.');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const facturaData = {
-        email,
-        prueba: false,
-        opciones: ['CALCULAR_SELLO'],
-      };
-
-      const response = await axios.post(
-        `${process.env.REACT_APP_API_URL}/api/timbrado/timbrar`,
-        {
-          restaurantId: selectedTicket.restaurantId,
-          ticketId: selectedTicket.id,
-          facturaData,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem('token')}`,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (response.data.success) {
-        toast.success(`Factura generada correctamente. En breve la recibirás en ${email}.`);
-        setIsModalOpen(false);
-      } else {
-        toast.error('Error al generar la factura.');
-      }
-    } catch (error) {
-      console.error('Error al timbrar la factura:', error);
-      if (error.response && error.response.data && error.response.data.details) {
-        toast.error(`Error al timbrar la factura: ${error.response.data.details}`);
-      } else {
-        toast.error('Error al timbrar la factura.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // 5) Render
-  return (
-    <div
-      className={`min-h-screen flex items-center justify-center p-4 ${
-        darkMode ? 'bg-gray-900' : 'bg-gray-50'
-      }`}
-      /** 
-       * Podrías usar inline style con branding.primaryColor 
-       * e.g. style={{ backgroundColor: branding.secondaryColor }}
-       */
-      style={{ backgroundColor: branding.secondaryColor }}
-    >
-      <div
-        className={`w-full max-w-md rounded-2xl shadow-2xl overflow-hidden ${
-          darkMode ? 'bg-gray-800' : 'bg-white'
-        }`}
-      >
-        {/* Encabezado personalizado */}
-        <div
-          className={`p-6 text-center ${
-            darkMode ? 'bg-gray-700' : 'bg-blue-50'
-          }`}
-          /** o style={{ backgroundColor: branding.primaryColor }} */
-          style={{ backgroundColor: branding.primaryColor }}
-        >
-          <div className="flex justify-center mb-4">
-            {branding.logoUrl ? (
-              <img
-                src={branding.logoUrl}
-                alt="Restaurante Logo"
-                className="w-16 h-16 object-contain rounded-full"
-              />
-            ) : (
-              <Ticket
-                className={`w-12 h-12 ${
-                  darkMode ? 'text-blue-400' : 'text-blue-600'
-                }`}
-              />
-            )}
-          </div>
-          <h2
-            className={`text-3xl font-bold mb-2 ${
-              darkMode ? 'text-white' : 'text-gray-800'
-            }`}
-          >
-            {branding.name || 'Buscar Ticket'}
-          </h2>
-          <p
-            className={`text-sm ${
-              darkMode ? 'text-gray-300' : 'text-gray-600'
-            }`}
-          >
-            Ingresa los detalles de tu ticket para facturar
-          </p>
+// Componente de Input reutilizable para el formulario fiscal
+const FiscalInput = ({ icon: Icon, label, ...props }) => (
+    <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">{label}</label>
+        <div className="relative">
+            <Icon className="pointer-events-none w-5 h-5 absolute top-1/2 transform -translate-y-1/2 left-3 text-gray-400" />
+            <input {...props} className="w-full py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors pl-10 pr-4" />
         </div>
-
-        <div className="p-6">
-          {/* Campos para ticket */}
-          <div className="space-y-4">
-            <div className="relative">
-              <input
-                type="text"
-                name="ticketNumber"
-                className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-300 ${
-                  darkMode
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500'
-                    : 'bg-white border-gray-300 text-gray-800 focus:ring-blue-400'
-                }`}
-                placeholder="Número de Ticket"
-                value={ticketData.ticketNumber}
-                onChange={handleChange}
-                required
-              />
-              <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                <Ticket
-                  className={`w-5 h-5 ${
-                    darkMode ? 'text-gray-400' : 'text-gray-500'
-                  }`}
-                />
-              </div>
-            </div>
-
-            {/* Monto */}
-            <div className="relative">
-              <input
-                type="number"
-                name="amount"
-                className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-300 ${
-                  darkMode
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500'
-                    : 'bg-white border-gray-300 text-gray-800 focus:ring-blue-400'
-                }`}
-                placeholder="Monto"
-                value={ticketData.amount}
-                onChange={handleChange}
-                required
-              />
-              <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                <span
-                  className={`text-lg font-bold ${
-                    darkMode ? 'text-gray-400' : 'text-gray-500'
-                  }`}
-                >
-                  $
-                </span>
-              </div>
-            </div>
-
-            {/* Fecha */}
-            <div className="relative">
-              <input
-                type="date"
-                name="date"
-                className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-300 ${
-                  darkMode
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500'
-                    : 'bg-white border-gray-300 text-gray-800 focus:ring-blue-400'
-                }`}
-                value={ticketData.date}
-                onChange={handleChange}
-                required
-              />
-              <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                <CheckCircle
-                  className={`w-5 h-5 ${
-                    darkMode ? 'text-gray-400' : 'text-gray-500'
-                  }`}
-                />
-              </div>
-            </div>
-
-            <button
-              onClick={handleSearch}
-              className={`w-full py-3 rounded-lg flex items-center justify-center space-x-2 transition-all duration-300 ${
-                darkMode
-                  ? 'bg-blue-700 text-white hover:bg-blue-600'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-              } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={loading}
-            >
-              <Search className="w-5 h-5" />
-              <span>{loading ? 'Buscando...' : 'Buscar Ticket'}</span>
-            </button>
-          </div>
-
-          {/* Si se encontró el Ticket */}
-          {selectedTicket && (
-            <div
-              className={`mt-6 p-4 rounded-lg ${
-                darkMode ? 'bg-gray-700' : 'bg-blue-50'
-              }`}
-            >
-              <h3
-                className={`text-xl font-bold mb-3 ${
-                  darkMode ? 'text-white' : 'text-gray-800'
-                }`}
-              >
-                Ticket Encontrado
-              </h3>
-              <div className="space-y-2">
-                <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  <strong>Número de Ticket:</strong>{' '}
-                  {selectedTicket.ticketNumber}
-                </p>
-                <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  <strong>Monto:</strong> {selectedTicket.amount} MXN
-                </p>
-                <p className={`${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                  <strong>Fecha:</strong>{' '}
-                  {new Date(selectedTicket.date).toLocaleDateString()}
-                </p>
-                <button
-                  onClick={handleFacturar}
-                  className={`w-full py-3 mt-4 rounded-lg transition-all duration-300 ${
-                    darkMode
-                      ? 'bg-green-700 text-white hover:bg-green-600'
-                      : 'bg-green-600 text-white hover:bg-green-700'
-                  }`}
-                >
-                  Facturar
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      <Modal
-        isOpen={isModalOpen}
-        onRequestClose={() => setIsModalOpen(false)}
-        className={`outline-none absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-2xl shadow-2xl ${
-          darkMode ? 'bg-gray-800' : 'bg-white'
-        }`}
-        overlayClassName="fixed inset-0 bg-black bg-opacity-50 z-50"
-      >
-        <div
-          className={`p-6 ${
-            darkMode ? 'bg-gray-700' : 'bg-blue-50'
-          } rounded-t-2xl`}
-          style={{ backgroundColor: branding.primaryColor }}
-        >
-          <div className="flex justify-center mb-4">
-            <Mail
-              className={`w-12 h-12 ${
-                darkMode ? 'text-blue-400' : 'text-blue-600'
-              }`}
-            />
-          </div>
-          <h2
-            className={`text-2xl font-bold text-center ${
-              darkMode ? 'text-white' : 'text-gray-800'
-            }`}
-          >
-            Enviar Factura
-          </h2>
-        </div>
-        <div className="p-6">
-          <form onSubmit={handleModalSubmit}>
-            <div className="relative mb-4">
-              <input
-                type="email"
-                className={`w-full pl-10 pr-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 transition-all duration-300 ${
-                  darkMode
-                    ? 'bg-gray-700 border-gray-600 text-white focus:ring-blue-500'
-                    : 'bg-white border-gray-300 text-gray-800 focus:ring-blue-400'
-                }`}
-                placeholder="Correo electrónico"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-              <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                <Mail
-                  className={`w-5 h-5 ${
-                    darkMode ? 'text-gray-400' : 'text-gray-500'
-                  }`}
-                />
-              </div>
-            </div>
-            <button
-              type="submit"
-              className={`w-full py-3 rounded-lg transition-all duration-300 ${
-                darkMode
-                  ? 'bg-blue-700 text-white hover:bg-blue-600'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-              } ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-              disabled={loading}
-            >
-              {loading ? 'Facturando...' : 'Enviar Factura'}
-            </button>
-          </form>
-        </div>
-      </Modal>
-
-      <ToastContainer theme={darkMode ? 'dark' : 'light'} />
     </div>
-  );
+);
+
+/**
+ * TicketSearch - Reimaginado como un asistente de facturación de autoservicio.
+ * * Estrategia de UX/UI:
+ * 1.  Reducción Drástica de Fricción: Se simplifica la búsqueda a un solo campo (Número de Ticket),
+ * eliminando la necesidad de que el usuario recuerde el monto y la fecha. Este es el cambio de UX más impactante.
+ * 2.  Flujo Guiado por Pasos: Se reemplaza el flujo de "búsqueda -> modal" por un asistente de 3 pasos
+ * dentro de una única tarjeta. La transición es más fluida, moderna y mantiene al usuario enfocado.
+ * 3.  Diseño Brandeado y de Confianza: El diseño central se personaliza con el logo y color del
+ * restaurante, mientras que elementos como la guía visual del ticket y el pie de página "Powered by NextManager"
+ * construyen confianza y profesionalismo.
+ * 4.  Feedback Claro en Cada Etapa: El usuario siempre sabe en qué paso está y recibe una confirmación
+ * visual clara al encontrar el ticket y al generar la factura con éxito.
+ */
+function TicketSearch() {
+    const [branding, setBranding] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [currentStep, setCurrentStep] = useState(1);
+    const [ticketNumber, setTicketNumber] = useState('');
+    const [foundTicket, setFoundTicket] = useState(null);
+    const [fiscalData, setFiscalData] = useState({ rfc: '', razonSocial: '', email: '' });
+
+    // Simulación de carga de branding basado en subdominio
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setBranding(mockBrandingData);
+            setIsLoading(false);
+        }, 1500);
+        return () => clearTimeout(timer);
+    }, []);
+
+    // Simulación de handlers
+    const handleSearch = (e) => {
+        e.preventDefault();
+        if (!ticketNumber) return;
+        console.log('Buscando ticket:', ticketNumber);
+        setFoundTicket(mockFoundTicket);
+        setCurrentStep(2); // Avanzar al siguiente paso
+    };
+
+    const handleGenerateInvoice = (e) => {
+        e.preventDefault();
+        console.log('Generando factura con datos:', fiscalData);
+        setCurrentStep(3); // Avanzar al paso de éxito
+    };
+    
+    const handleReset = () => {
+        setTicketNumber('');
+        setFoundTicket(null);
+        setFiscalData({ rfc: '', razonSocial: '', email: '' });
+        setCurrentStep(1);
+    };
+
+    if (isLoading) {
+        return <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center"><p className="text-gray-500">Cargando portal...</p></div>;
+    }
+
+    const primaryColor = branding?.primaryColor || '#005DAB';
+
+    return (
+        <div className="min-h-screen flex flex-col font-sans bg-slate-50 dark:bg-slate-900 text-gray-800 dark:text-white">
+            <header className="py-6 px-4 sm:px-6 lg:px-8">
+                <div className="container mx-auto flex justify-center lg:justify-start">
+                    {branding?.logoUrl && <img src={branding.logoUrl} alt={`Logo de ${branding.name}`} className="h-12 w-auto" />}
+                </div>
+            </header>
+
+            <main className="flex-grow flex items-center justify-center p-4">
+                <motion.div
+                    className="w-full max-w-lg bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-xl overflow-hidden"
+                    animate={{ height: 'auto' }}
+                >
+                    <AnimatePresence mode="wait">
+                        {/* --- PASO 1: BÚSQUEDA DE TICKET --- */}
+                        {currentStep === 1 && (
+                            <motion.div key={1} initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} transition={{ duration: 0.4, ease: 'easeInOut' }} className="p-8">
+                                <div className="text-center">
+                                    <h1 className="text-3xl font-bold tracking-tight">{branding?.name}</h1>
+                                    <p className="mt-2 text-gray-600 dark:text-slate-300">Bienvenido al portal de facturación.</p>
+                                </div>
+                                <form onSubmit={handleSearch} className="mt-8 space-y-4">
+                                    <FiscalInput icon={TicketIcon} label="Número de Ticket" value={ticketNumber} onChange={e => setTicketNumber(e.target.value)} placeholder="Ej. A25-B7C91" required />
+                                    <button type="submit" className="w-full text-lg font-semibold text-white py-3 rounded-xl transition-transform transform hover:-translate-y-1" style={{ backgroundColor: primaryColor }}>
+                                        Buscar Ticket
+                                    </button>
+                                </form>
+                                <div className="mt-6 text-center text-xs text-gray-500">
+                                    <p>¿No encuentras el número? Búscalo en la parte inferior de tu recibo.</p>
+                                </div>
+                            </motion.div>
+                        )}
+                        
+                        {/* --- PASO 2: DATOS FISCALES --- */}
+                        {currentStep === 2 && foundTicket && (
+                            <motion.div key={2} initial={{ opacity: 0, x: 50 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -50 }} transition={{ duration: 0.4, ease: 'easeInOut' }} className="p-8">
+                                <div className="border-b border-gray-200 dark:border-slate-700 pb-4 mb-6">
+                                    <h2 className="text-xl font-bold">Ticket Encontrado</h2>
+                                    <div className="flex justify-between text-sm mt-2 text-gray-600 dark:text-slate-300">
+                                        <p>Total: <span className="font-semibold text-gray-800 dark:text-white">${foundTicket.amount.toFixed(2)}</span></p>
+                                        <p>Fecha: <span className="font-semibold text-gray-800 dark:text-white">{foundTicket.date}</span></p>
+                                    </div>
+                                </div>
+                                <h3 className="font-semibold mb-4">Ingresa tus datos para facturar</h3>
+                                <form onSubmit={handleGenerateInvoice} className="space-y-4">
+                                    <FiscalInput icon={UserCircleIcon} label="RFC" name="rfc" value={fiscalData.rfc} onChange={e => setFiscalData({...fiscalData, rfc: e.target.value})} placeholder="Tu RFC" required />
+                                    <FiscalInput icon={BuildingStorefrontIcon} label="Razón Social" name="razonSocial" value={fiscalData.razonSocial} onChange={e => setFiscalData({...fiscalData, razonSocial: e.target.value})} placeholder="Nombre o Razón Social" required />
+                                    <FiscalInput icon={AtSymbolIcon} label="Correo para recibir factura" name="email" type="email" value={fiscalData.email} onChange={e => setFiscalData({...fiscalData, email: e.target.value})} placeholder="tu@correo.com" required />
+                                    <div className="flex items-center gap-4 pt-4">
+                                        <button type="button" onClick={handleReset} className="w-full text-sm font-semibold py-3 rounded-xl border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700">Buscar otro ticket</button>
+                                        <button type="submit" className="w-full text-lg font-semibold text-white py-3 rounded-xl transition-transform transform hover:-translate-y-1" style={{ backgroundColor: primaryColor }}>
+                                            Generar Factura <ArrowRightIcon className="inline w-5 h-5 ml-1" />
+                                        </button>
+                                    </div>
+                                </form>
+                            </motion.div>
+                        )}
+                        
+                        {/* --- PASO 3: ÉXITO --- */}
+                        {currentStep === 3 && (
+                            <motion.div key={3} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4, ease: 'easeOut' }} className="p-8 text-center">
+                                <CheckBadgeIcon className="w-20 h-20 text-green-500 mx-auto mb-4" />
+                                <h2 className="text-2xl font-bold">¡Factura Generada!</h2>
+                                <p className="mt-2 text-gray-600 dark:text-slate-300">Hemos enviado la factura a <strong className="text-gray-800 dark:text-white">{fiscalData.email}</strong>. Revisa tu bandeja de entrada (y la de spam).</p>
+                                <button onClick={handleReset} className="w-full mt-6 text-lg font-semibold text-white py-3 rounded-xl" style={{ backgroundColor: primaryColor }}>
+                                    Facturar otro ticket
+                                </button>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </motion.div>
+            </main>
+
+            <footer className="py-8 text-center text-sm text-gray-500 dark:text-slate-500">
+                <p>Portal de facturación <span className="font-semibold" style={{ color: primaryColor }}>Powered by NextManager</span></p>
+            </footer>
+        </div>
+    );
 }
 
 export default TicketSearch;
