@@ -1,395 +1,270 @@
 // src/pages/RestaurantSetup.js
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
-import { ToastContainer, toast } from 'react-toastify';
+// Usaremos un set de iconos consistente y de alta calidad
 import {
-  FaPlus, FaTrash, FaKey, FaCertificate, FaFileUpload, FaServer, FaLink,
-  FaCheckCircle, FaTimesCircle, FaSpinner, FaArrowLeft, FaArrowRight, FaSave
-} from 'react-icons/fa';
-import 'react-toastify/dist/ReactToastify.css';
-import InputField from '../components/InputField';
-import ColorPicker from '../components/ColorPicker';
-import FileUploadButton from '../components/FileUploadButton'; // Importa el corregido
-import { fetchAuthSession } from 'aws-amplify/auth';
+    BuildingStorefrontIcon, PaintBrushIcon, CheckCircleIcon, ChevronRightIcon,
+    PlusIcon, TrashIcon, TagIcon, MapPinIcon, ReceiptPercentIcon, KeyIcon,
+    CpuChipIcon, CircleStackIcon, GlobeAltIcon, PhotoIcon
+} from '@heroicons/react/24/outline';
 
-// --- Componente de Vista Previa del Micrositio (Sin cambios respecto a tu última versión) ---
-const MicrositePreview = ({ config, logoFile }) => {
-  const [logoPreviewUrl, setLogoPreviewUrl] = useState(null);
-  const { darkMode } = useThemeContext();
-  const [previewError, setPreviewError] = useState(false);
-
-  useEffect(() => {
-    let objectUrl = null; setPreviewError(false);
-    if (logoFile instanceof File) {
-      try { objectUrl = URL.createObjectURL(logoFile); setLogoPreviewUrl(objectUrl); }
-      catch (error) { console.error("Error creating object URL for preview:", error); setPreviewError(true); setLogoPreviewUrl(null); }
-    } else if (config.existingLogoUrl) { setLogoPreviewUrl(config.existingLogoUrl); }
-    else { setLogoPreviewUrl(null); }
-    return () => { if (objectUrl) URL.revokeObjectURL(objectUrl); };
-  }, [logoFile, config.existingLogoUrl]);
-
-  const fullDomain = config.customDomain ? `${config.customDomain.toLowerCase().replace(/[^a-z0-9_-]/g, '')}.nextmanager.com.mx` : '[subdominio].nextmanager.com.mx';
-  const headerStyle = { backgroundColor: config.primaryColor || '#3B82F6', color: '#FFFFFF', padding: '20px', textAlign: 'center', borderTopLeftRadius: 'inherit', borderTopRightRadius: 'inherit' };
-  const bodyStyle = { backgroundColor: config.secondaryColor || '#F9FAFB', padding: '30px', minHeight: '180px', textAlign: 'center', color: darkMode ? '#E5E7EB' : '#374151' };
-
-  return (
-    <div className={`border-2 border-dashed rounded-lg mt-6 mb-4 ${darkMode ? 'border-gray-600' : 'border-gray-300'} p-4`}>
-      <h4 className={`text-lg font-semibold mb-3 text-center ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Vista Previa del Micrositio</h4>
-      <p className={`text-sm text-center mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>URL: <strong className={darkMode ? 'text-blue-400' : 'text-blue-700'}>{fullDomain}</strong></p>
-      <div className={`border rounded-lg shadow-md max-w-md mx-auto overflow-hidden ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
-        <div style={headerStyle}>
-          <div className="h-12 flex items-center justify-center mb-2">{logoPreviewUrl ? (<img src={logoPreviewUrl} alt="Logo Preview" className="max-h-full max-w-full object-contain" onError={() => { setPreviewError(true); setLogoPreviewUrl(null); }} />) : (<span className="text-2xl font-bold" style={{ color: '#FFFFFF' }}>{previewError ? 'Error Logo' : 'Logo'}</span>)}</div>
-          <h3 className="text-xl font-bold truncate" style={{ color: '#FFFFFF' }}>{config.portalName || '[Nombre del Portal]'}</h3>
-        </div>
-        <div style={bodyStyle}><p className="font-semibold">Buscar Ticket</p><div className="mt-3 space-y-2"><div className={`h-8 rounded ${darkMode ? 'bg-gray-600/50' : 'bg-gray-200'}`}></div> <div className={`h-8 rounded ${darkMode ? 'bg-gray-600/50' : 'bg-gray-200'}`}></div> <div className={`h-8 rounded ${darkMode ? 'bg-gray-600/50' : 'bg-gray-200'}`}></div> <div className={`h-10 rounded ${darkMode ? 'bg-blue-700/50' : 'bg-blue-500/80'}`}></div></div></div>
-      </div>
-      {previewError && (<p className="text-red-500 text-sm text-center mt-2">No se pudo cargar la vista previa del logo.</p>)}
-    </div>
-  );
+// --- MOCK DATA & HELPERS ---
+const initialRestaurant = {
+    id: Date.now(), name: '', address: '', rfc: '', fiscalRegime: '601 - General de Ley Personas Morales',
+    csdPassword: '', csdCertFile: null, csdKeyFile: null, logoFile: null,
+    dbHost: '', dbPort: '', dbUser: '', dbPassword: '', dbName: ''
 };
-// --- Fin Componente Vista Previa ---
 
+// --- SUBCOMPONENTES DE UI PARA EL WIZARD ---
 
-function RestaurantSetup() {
-  const { darkMode } = useThemeContext();
-  const navigate = useNavigate();
-  const [currentStage, setCurrentStage] = useState(1);
-  const [portalConfig, setPortalConfig] = useState({ portalName: '', customDomain: '', primaryColor: '#1c64f2', secondaryColor: '#f3f4f6', existingLogoUrl: null });
-  const [portalLogoFile, setPortalLogoFile] = useState(null);
-  const [fileErrors, setFileErrors] = useState({ portalLogo: null, restaurants: {} });
-  const [subdomainStatus, setSubdomainStatus] = useState({ loading: false, available: null, checked: false, message: '' });
-  const [debounceTimeout, setDebounceTimeout] = useState(null);
-  const [restaurants, setRestaurants] = useState([{
-    id: Date.now(), name: '', address: '', rfc: '', fiscal_address: '', csd_password: '',
-    csd_certificate: null, csd_key: null, logo: null,
-    connection_host: '', connection_port: '', connection_user: '',
-    connection_password: '', connection_db_name: '',
-    vpn_username: '', vpn_password: ''
-  }]);
-
-  // --- Declaración de Refs ---
-  const fileInputRefs = useRef({});
-  const portalLogoInputRef = useRef(); // <<< ¡Estaba aquí!
- // Para todos los inputs de archivo dinámicos
-  // --- Fin Declaración Refs ---
-
-  const [stage1Loading, setStage1Loading] = useState(false);
-  const [finalSubmitLoading, setFinalSubmitLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-  useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // --- Función de Validación de Archivos ---
-  const validateFile = (file, type) => {
-    const maxSize = 2 * 1024 * 1024; // 2MB
-    if (!file) return "Archivo no seleccionado.";
-    if (file.size > maxSize) return `Archivo grande (Máx: 2MB).`;
-
-    if (type === 'image') {
-      if (!['image/jpeg', 'image/png', 'image/gif', 'image/svg+xml', 'image/webp'].includes(file.type)) {
-        return `Formato de imagen no válido.`;
-      }
-    } else if (type === 'cer') {
-      if (!file.name.toLowerCase().endsWith('.cer')) return `Debe ser archivo .cer`;
-    } else if (type === 'key') {
-      if (!file.name.toLowerCase().endsWith('.key')) return `Debe ser archivo .key`;
-    }
-    return null; // Sin error
-  };
-
-  // --- Handlers Portal ---
-  const handlePortalColorChange = (name, colorValue) => {
-    setPortalConfig(prev => ({ ...prev, [name]: colorValue }));
-  };
-
-  const handlePortalLogoChange = (e) => {
-    const file = e.target.files[0];
-    setFileErrors(prev => ({ ...prev, portalLogo: null }));
-    if (file) {
-      const fileError = validateFile(file, 'image');
-      if (fileError) {
-        setFileErrors(prev => ({ ...prev, portalLogo: fileError }));
-        toast.error(`Logo Portal: ${fileError}`);
-        if(e.target) e.target.value = null;
-        setPortalLogoFile(null);
-        return;
-      }
-      setPortalLogoFile(file);
-    } else {
-      setPortalLogoFile(null);
-    }
-  };
-
-  const checkSubdomainAvailability = useCallback(async (subdomainValue) => {
-    if (!subdomainValue || !/^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(subdomainValue)) {
-      setSubdomainStatus({ loading: false, available: false, checked: true, message: 'Formato inválido.' });
-      return;
-    }
-    setSubdomainStatus({ loading: true, available: null, checked: false, message: 'Verificando...' });
-    try {
-      const session = await fetchAuthSession(); const idToken = session.tokens?.idToken?.toString(); if (!idToken) throw new Error('Token no disponible');
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/portal/check-subdomain?subdomain=${subdomainValue}`, { headers: { Authorization: `Bearer ${idToken}` } });
-      setSubdomainStatus({ loading: false, available: response.data.available, checked: true, message: response.data.message });
-      toast[response.data.available ? 'success' : 'error'](response.data.message || "Disponibilidad verificada");
-    } catch (err) {
-      const errorMsg = err.response?.data?.message || 'Error verificando.';
-      setSubdomainStatus({ loading: false, available: false, checked: true, message: errorMsg }); toast.error(errorMsg);
-    }
-  }, []); // <-- Asegúrate que REACT_APP_API_URL esté en .env
-
-  const handlePortalChange = (e) => {
-    const { name, value } = e.target; let processedValue = value;
-    if (name === 'customDomain') {
-      processedValue = value.toLowerCase().replace(/[^a-z0-9_-]/g, '');
-      setSubdomainStatus({ loading: false, available: null, checked: false, message: '' });
-      if (debounceTimeout) clearTimeout(debounceTimeout);
-      setPortalConfig(prev => ({ ...prev, [name]: processedValue }));
-      if (processedValue === '') return;
-      const newTimeout = setTimeout(() => checkSubdomainAvailability(processedValue), 800);
-      setDebounceTimeout(newTimeout);
-    } else { setPortalConfig(prev => ({ ...prev, [name]: processedValue })); }
-  };
-
-  useEffect(() => { return () => { if (debounceTimeout) clearTimeout(debounceTimeout); }; }, [debounceTimeout]);
-
-  // --- Handlers Restaurantes (Completos) ---
-  const handleRestaurantChange = useCallback((id, e) => {
-    const { name, value, type, checked } = e.target;
-    const val = type === 'checkbox' ? checked : value; // Manejar checkboxes si los hubiera
-    setRestaurants(prev => prev.map(rest => rest.id === id ? { ...rest, [name]: val } : rest ));
-  }, []);
-
-  const handleFileChange = (id, e) => {
-    const file = e.target.files[0];
-    const name = e.target.name; // 'csd_certificate', 'csd_key', 'logo'
-
-    // Crear una clave única para los errores de este input específico
-    const fileErrorKey = `${id}-${name}`;
-    setFileErrors(prev => {
-        const newRestaurantErrors = { ...(prev.restaurants[id] || {}) };
-        delete newRestaurantErrors[name]; // Limpiar error anterior para este input
-        return { ...prev, restaurants: { ...prev.restaurants, [id]: newRestaurantErrors } };
-    });
-
-    if (file) {
-      let fileType = 'document';
-      let friendlyLabel = name; // Para el mensaje de error
-      if (name === 'logo') { fileType = 'image'; friendlyLabel = 'Logo Restaurante'; }
-      else if (name === 'csd_certificate') { fileType = 'cer'; friendlyLabel = 'Certificado CSD'; }
-      else if (name === 'csd_key') { fileType = 'key'; friendlyLabel = 'Llave CSD'; }
-
-      const errorMsg = validateFile(file, fileType);
-      if (errorMsg) {
-        // Guardar error específico
-        setFileErrors(prev => ({
-            ...prev,
-            restaurants: { ...prev.restaurants, [id]: { ...(prev.restaurants?.[id] || {}), [name]: errorMsg } }
-        }));
-        toast.error(`Restaurante ${restaurants.findIndex(r=>r.id===id)+1} - ${friendlyLabel}: ${errorMsg}`);
-        if(e.target) e.target.value = null; // Limpiar input visualmente
-        // Asegurar que el archivo erróneo no se quede en el estado principal
-        setRestaurants(prev => prev.map(rest => rest.id === id ? { ...rest, [name]: null } : rest));
-        return;
-      }
-      // Si no hay error, guardar el archivo en el estado principal
-      setRestaurants(prev => prev.map(rest => rest.id === id ? { ...rest, [name]: file } : rest));
-    } else {
-      // Si el usuario cancela la selección, limpiar el archivo del estado
-      setRestaurants(prev => prev.map(rest => rest.id === id ? { ...rest, [name]: null } : rest));
-    }
-  };
-
-  const handleAddRestaurant = () => {
-     setRestaurants(prev => [...prev, {
-       id: Date.now(), name: '', address: '', rfc: '', fiscal_address: '', csd_password: '',
-       csd_certificate: null, csd_key: null, logo: null,
-       connection_host: '', connection_port: '', connection_user: '',
-       connection_password: '', connection_db_name: '',
-       vpn_username: '', vpn_password: ''
-     }]);
-  };
-
-  const handleRemoveRestaurant = (id) => {
-     setRestaurants(prev => prev.filter(rest => rest.id !== id));
-     // Limpiar errores asociados a este restaurante
-     setFileErrors(prev => {
-         const newErrors = { ...prev };
-         delete newErrors.restaurants[id];
-         return newErrors;
-     });
-  };
-
-  // --- Navegación y Submit por Etapas ---
-  const handleSavePortalConfigAndNext = async () => {
-    // ... (Código completo como en la respuesta anterior, validando y llamando a POST /api/portal/setup) ...
-    setError(null);
-    if (!portalConfig.portalName.trim()) { toast.error("Nombre del portal es requerido."); return; }
-    if (!portalConfig.customDomain.trim()) { toast.error("Subdominio es requerido."); return; }
-    if (!subdomainStatus.checked || !subdomainStatus.available) { toast.error("Subdominio no disponible/verificado."); return; }
-    if (fileErrors.portalLogo) { toast.error("Corrige el error del logo del portal."); return; }
-    setStage1Loading(true);
-    const formData = new FormData();
-    const portalDataToSend = { portalName: portalConfig.portalName, customDomain: portalConfig.customDomain, primaryColor: portalConfig.primaryColor, secondaryColor: portalConfig.secondaryColor };
-    formData.append('portalConfig', JSON.stringify(portalDataToSend));
-    if (portalLogoFile) formData.append('portalLogo', portalLogoFile, portalLogoFile.name);
-    let idToken; try { const session = await fetchAuthSession(); idToken = session.tokens?.idToken?.toString(); if (!idToken) throw new Error('Token no disponible'); } catch (authError) { setError("Error autenticación."); toast.error("Error autenticación."); setStage1Loading(false); return; }
-    try {
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/portal/setup`, formData, { headers: { Authorization: `Bearer ${idToken}` } });
-      toast.success(response.data.message || 'Portal guardado.');
-      if(response.data.portalConfig?.portal_logo_url){ setPortalConfig(prev => ({...prev, existingLogoUrl: response.data.portalConfig.portal_logo_url})); }
-      setPortalLogoFile(null); setCurrentStage(2); window.scrollTo({ top: 0, behavior: 'smooth' });
-    } catch (error) { const errorMsg = error.response?.data?.message || 'Error guardando portal.'; setError(errorMsg); toast.error(errorMsg); }
-    finally { setStage1Loading(false); }
-  };
-
-  const handlePreviousStage = () => { setCurrentStage(prev => prev - 1); window.scrollTo({ top: 0, behavior: 'smooth' }); };
-
-  const handleSubmitAllConfig = async () => {
-    // ... (Código completo como en la respuesta anterior, validando, creando FormData para restaurantes y llamando a POST /api/portal-and-restaurants-setup) ...
-    setError(null); setFinalSubmitLoading(true);
-    if (restaurants.some(r => !r.name || !r.address || !r.rfc || !r.fiscal_address || !r.csd_password || !r.csd_certificate || !r.csd_key)) {
-        toast.error("Completa todos los campos requeridos para cada restaurante (Nombre, Dirección, RFC, Dir. Fiscal, CSD .cer, .key y Contraseña).");
-        setFinalSubmitLoading(false); return;
-    }
-    // Validar errores de archivos
-    const hasFileErrors = Object.values(fileErrors.restaurants).some(restErrors => Object.values(restErrors).some(e => e !== null));
-    if (hasFileErrors) { toast.error("Corrige los errores en los archivos subidos."); setFinalSubmitLoading(false); return; }
-
-    const formData = new FormData();
-    // El backend necesita saber a qué portal asociar estos restaurantes.
-    // Podemos pasar el portalConfig.customDomain o el backend puede buscar el portal del user_id.
-    // Vamos a asumir que el backend obtiene el portalConfig del usuario autenticado.
-    const restaurantsPayload = restaurants.map(r => { const { csd_certificate, csd_key, logo, ...restData } = r; return restData; });
-    formData.append('restaurantsData', JSON.stringify(restaurantsPayload));
-    restaurants.forEach((restaurant, index) => {
-        if (restaurant.csd_certificate) formData.append(`restaurants[${index}][csd_certificate]`, restaurant.csd_certificate, restaurant.csd_certificate.name);
-        if (restaurant.csd_key) formData.append(`restaurants[${index}][csd_key]`, restaurant.csd_key, restaurant.csd_key.name);
-        if (restaurant.logo) formData.append(`restaurants[${index}][logo]`, restaurant.logo, restaurant.logo.name);
-    });
-
-    let idToken; try { const session = await fetchAuthSession(); idToken = session.tokens?.idToken?.toString(); if (!idToken) throw new Error('Token no disponible'); } catch (authError) { setError("Error autenticación."); toast.error("Error autenticación."); setFinalSubmitLoading(false); return; }
-    try {
-      // Llamada al endpoint original, asumiendo que puede manejar solo restaurantes si el portal ya existe
-      const response = await axios.post(`${process.env.REACT_APP_API_URL}/api/portal-and-restaurants-setup`, formData, { headers: { Authorization: `Bearer ${idToken}` } });
-      toast.success(response.data.message || '¡Configuración guardada!');
-      setTimeout(() => navigate('/dashboard', { replace: true }), 1500);
-    } catch (error) { const errorMsg = error.response?.data?.message || 'Error guardando restaurantes.'; setError(errorMsg); toast.error(errorMsg); }
-    finally { setFinalSubmitLoading(false); }
-  };
-
-
-  // --- Renderizado con Etapas (Completo) ---
-  return (
-    <div className={`min-h-screen flex flex-col items-center p-2 sm:p-4 ${darkMode ? 'bg-gradient-to-br from-gray-900 to-gray-800 text-white' : 'bg-gradient-to-br from-blue-100 to-white text-black'}`}>
-      <div className={`w-full max-w-5xl p-3 sm:p-6 md:p-8 rounded-xl sm:rounded-3xl shadow-xl sm:shadow-2xl ${darkMode ? 'bg-gray-800 border-2 border-gray-700' : 'bg-white border border-gray-200'}`}>
-        {/* Indicador de etapa */}
-        <div className="w-full flex justify-center items-center mb-4"> <div className="flex items-center"> <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${currentStage === 1 ? 'bg-blue-600 text-white scale-110 shadow-lg' : 'bg-gray-300 text-gray-700'}`}>1</div> <div className={`h-1 w-8 sm:w-10 mx-1 transition-all duration-300 ${currentStage === 2 ? 'bg-blue-600' : 'bg-gray-300'}`}></div> <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${currentStage === 2 ? 'bg-blue-600 text-white scale-110 shadow-lg' : 'bg-gray-300 text-gray-700'}`}>2</div> </div> </div>
-        <h2 className={`text-2xl sm:text-3xl md:text-4xl font-extrabold mb-4 sm:mb-6 md:mb-8 text-center bg-clip-text text-transparent ${darkMode ? 'bg-gradient-to-r from-blue-400 to-blue-600' : 'bg-gradient-to-r from-blue-600 to-blue-800'}`}> Configuración Inicial <span className="text-base md:text-lg">({isMobile ? `Paso ${currentStage}` : `Paso ${currentStage} de 2`})</span> </h2>
-        {error && (<div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-3 sm:p-4 mb-4 sm:mb-6 rounded-lg">{error}</div>)}
-
-        <div className="space-y-6 sm:space-y-8">
-          {/* --- ETAPA 1: Configuración del Portal --- */}
-          {currentStage === 1 && (
-            <section aria-labelledby="portal-config-heading">
-              <div className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl ${darkMode ? 'bg-gray-700/50 border border-gray-600' : 'bg-gray-50/80 border border-gray-200'} hover:shadow-lg transition-shadow duration-300`}>
-                <h3 id="portal-config-heading" className={`text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 ${darkMode ? 'text-white' : 'text-blue-800'}`}>Datos del Portal de Clientes</h3>
-                <p className={`mb-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Define la apariencia y el acceso a tu micrositio.</p>
-                <InputField label="Nombre del Portal" name="portalName" value={portalConfig.portalName} onChange={handlePortalChange} placeholder="Ej. Facturación Restaurante El Sol" icon={FaServer} required />
-                <div className="relative mt-4">
-                   <InputField label="Subdominio (Prefijo)" name="customDomain" value={portalConfig.customDomain} onChange={handlePortalChange} placeholder="ej. restaurante-sol" icon={FaLink} required
-                     className={`pr-10 ${subdomainStatus.checked && subdomainStatus.available === true ? 'border-green-500 focus:ring-green-500' : ''} ${subdomainStatus.checked && subdomainStatus.available === false ? 'border-red-500 focus:ring-red-500' : ''}`} />
-                   <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none" style={{top: '1.875rem'}}> {subdomainStatus.loading && <FaSpinner className="animate-spin text-gray-400" />}{subdomainStatus.checked && subdomainStatus.available === true && <FaCheckCircle className="text-green-500" />}{subdomainStatus.checked && subdomainStatus.available === false && <FaTimesCircle className="text-red-500" />}</div>
-                 </div>
-                 <p className={`text-xs mt-1 ${subdomainStatus.loading ? 'text-gray-500' : subdomainStatus.available ? 'text-green-600' : 'text-red-600'}`}> {subdomainStatus.message || '\u00A0'} </p>
-                 <p className={`text-xs mt-1 mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}> URL final: <strong>{portalConfig.customDomain || '[subdominio]'}.nextmanager.com.mx</strong> </p>
-                 <FileUploadButton name="portalLogo" fileName={portalLogoFile?.name} inputRef={portalLogoInputRef} onChangeFile={handlePortalLogoChange} icon={FaFileUpload} label="Logo del Portal (Opcional)" accept="image/*" error={fileErrors.portalLogo} helpText="PNG, JPG, GIF, SVG, WebP. Máx: 2MB"/>
-                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
-                   <ColorPicker label="Color Primario" name="primaryColor" value={portalConfig.primaryColor} onChange={(name, color) => handlePortalColorChange(name, color)} />
-                   <ColorPicker label="Color Secundario (Fondo)" name="secondaryColor" value={portalConfig.secondaryColor} onChange={(name, color) => handlePortalColorChange(name, color)} />
-                 </div>
-              </div>
-              <MicrositePreview config={portalConfig} logoFile={portalLogoFile} />
-              <div className="mt-6 text-right">
-                 <button type="button" onClick={handleSavePortalConfigAndNext}
-                   disabled={stage1Loading || !portalConfig.portalName || !portalConfig.customDomain || !subdomainStatus.available || !!fileErrors.portalLogo}
-                   className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center sm:justify-start">
-                   {stage1Loading ? <FaSpinner className="animate-spin mr-2" /> : null}
-                   {stage1Loading ? 'Guardando Portal...' : (<><span>Siguiente: Datos Restaurante</span> <FaArrowRight className="ml-2" /></>)}
-                 </button>
-               </div>
-            </section>
-          )}
-
-          {/* --- ETAPA 2: Configuración de Restaurantes y Fiscal --- */}
-          {currentStage === 2 && (
-            <section aria-labelledby="restaurant-config-heading">
-              <h3 id="restaurant-config-heading" className={`text-xl sm:text-2xl font-semibold mb-3 sm:mb-4 ${darkMode ? 'text-white' : 'text-blue-800'}`}>Datos del Restaurante y Facturación</h3>
-              <p className={`mb-4 text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Ingresa la información fiscal y de conexión (si aplica) para cada sucursal.</p>
-              {restaurants.map((restaurant, index) => (
-                <div key={restaurant.id} className={`p-4 sm:p-6 rounded-xl sm:rounded-2xl transition-all duration-300 mt-4 ${darkMode ? 'bg-gray-700/50 border border-gray-600' : 'bg-gray-50/80 border border-gray-200'} hover:shadow-md relative`}>
-                   {restaurants.length > 1 && ( <button type="button" onClick={() => handleRemoveRestaurant(restaurant.id)} className="absolute top-3 right-3 text-red-500 hover:text-red-700 p-1.5 rounded-full hover:bg-red-100/50 dark:hover:bg-red-900/30 transition-colors" aria-label="Eliminar restaurante"><FaTrash size={14} /></button> )}
-                   <h4 className={`text-lg sm:text-xl font-semibold mb-3 sm:mb-4 ${darkMode ? 'text-gray-200' : 'text-gray-700'}`}>Restaurante {index + 1}</h4>
-                   {/* Campos Restaurante */}
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3 mb-4">
-                     <InputField label="Nombre Comercial" name="name" value={restaurant.name} onChange={(e) => handleRestaurantChange(restaurant.id, e)} required icon={FaServer} />
-                     <InputField label="Dirección (Calle, No, Colonia)" name="address" value={restaurant.address} onChange={(e) => handleRestaurantChange(restaurant.id, e)} required icon={FaServer} placeholder="Av. Principal #123, Col. Centro"/>
-                   </div>
-                   {/* Datos Fiscales */}
-                   <div className="mt-4 pt-4 border-t border-gray-300 dark:border-gray-600">
-                      <h5 className={`text-base font-medium mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>Datos Fiscales</h5>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-3">
-                        <InputField label="RFC" name="rfc" value={restaurant.rfc} onChange={(e) => handleRestaurantChange(restaurant.id, e)} required icon={FaCertificate} maxLength={13} placeholder="XAXX010101000"/>
-                        <InputField label="Dirección Fiscal (CP, Ciudad, Estado)" name="fiscal_address" value={restaurant.fiscal_address} onChange={(e) => handleRestaurantChange(restaurant.id, e)} required icon={FaServer} placeholder="06000, Ciudad de México, CDMX"/>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-4">
-                         <FileUploadButton name="csd_certificate" fileName={restaurant.csd_certificate?.name} inputRef={(el) => fileInputRefs.current[`${restaurant.id}-csd_certificate`] = el} onChangeFile={(e) => handleFileChange(restaurant.id, e)} icon={FaCertificate} label="Certificado CSD (.cer)" accept=".cer" error={fileErrors.restaurants?.[restaurant.id]?.csd_certificate} helpText="Archivo .cer del SAT" required/>
-                         <FileUploadButton name="csd_key" fileName={restaurant.csd_key?.name} inputRef={(el) => fileInputRefs.current[`${restaurant.id}-csd_key`] = el} onChangeFile={(e) => handleFileChange(restaurant.id, e)} icon={FaKey} label="Llave CSD (.key)" accept=".key" error={fileErrors.restaurants?.[restaurant.id]?.csd_key} helpText="Archivo .key del SAT" required/>
-                         <FileUploadButton name="logo" fileName={restaurant.logo?.name} inputRef={(el) => fileInputRefs.current[`${restaurant.id}-logo`] = el} onChangeFile={(e) => handleFileChange(restaurant.id, e)} icon={FaFileUpload} label="Logo Restaurante" accept="image/*" error={fileErrors.restaurants?.[restaurant.id]?.logo} helpText="Opcional, Máx 2MB"/>
-                      </div>
-                      <div className="mt-3">
-                         <InputField label="Contraseña CSD" name="csd_password" value={restaurant.csd_password} onChange={(e) => handleRestaurantChange(restaurant.id, e)} type="password" icon={FaKey} required />
-                      </div>
-                   </div>
-                   {/* Conexión SoftRestaurant */}
-                   <div className="mt-6 pt-4 border-t border-gray-300 dark:border-gray-600">
-                     <h5 className={`text-base sm:text-lg font-semibold mb-3 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>Datos Conexión SoftRestaurant (Opcional)</h5>
-                     <p className={`text-xs mb-3 ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>Solo si deseas sincronización con el punto de venta.</p>
-                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-3">
-                       <InputField label="Host/IP Servidor SR" name="connection_host" value={restaurant.connection_host} onChange={(e) => handleRestaurantChange(restaurant.id, e)} placeholder="192.168.1.100" />
-                       <InputField label="Puerto SR" name="connection_port" value={restaurant.connection_port} onChange={(e) => handleRestaurantChange(restaurant.id, e)} placeholder="1433" type="number" />
-                       <InputField label="Usuario BD SR" name="connection_user" value={restaurant.connection_user} onChange={(e) => handleRestaurantChange(restaurant.id, e)} placeholder="sa" />
-                       <InputField label="Contraseña BD SR" name="connection_password" value={restaurant.connection_password} onChange={(e) => handleRestaurantChange(restaurant.id, e)} type="password" />
-                       <InputField label="Nombre BD SR" name="connection_db_name" value={restaurant.connection_db_name} onChange={(e) => handleRestaurantChange(restaurant.id, e)} placeholder="softrestaurant10" />
-                       {/* VPN Fields */}
-                       {/* <InputField label="Usuario VPN (Opcional)" name="vpn_username" value={restaurant.vpn_username} onChange={(e) => handleRestaurantChange(restaurant.id, e)} /> */}
-                       {/* <InputField label="Contraseña VPN (Opcional)" name="vpn_password" value={restaurant.vpn_password} onChange={(e) => handleRestaurantChange(restaurant.id, e)} type="password"/> */}
-                     </div>
-                   </div>
-                 </div>
-              ))}
-              <div className="flex flex-col md:flex-row justify-between items-center gap-4 mt-8">
-                <button type="button" className="w-full md:w-auto order-last md:order-first bg-gray-500 hover:bg-gray-600 text-white px-5 py-2.5 rounded-lg transition-colors flex items-center justify-center" onClick={handlePreviousStage}> <FaArrowLeft className="mr-2" /> Anterior </button>
-                <button type="button" className="w-full md:w-auto bg-green-500 hover:bg-green-600 text-white px-5 py-2.5 rounded-lg transition-colors flex items-center justify-center" onClick={handleAddRestaurant}> <FaPlus className="mr-2" /> Agregar Restaurante </button>
-                <button type="button" onClick={handleSubmitAllConfig} className="w-full md:w-auto order-first md:order-last bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-2.5 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
-                  disabled={finalSubmitLoading || restaurants.some(r => !r.name || !r.address || !r.rfc || !r.fiscal_address || !r.csd_password || !r.csd_certificate || !r.csd_key)}>
-                  {finalSubmitLoading ? <FaSpinner className="animate-spin mr-2" /> : <FaSave className="mr-2" />}
-                  Finalizar y Guardar Todo
+// Stepper lateral que muestra el progreso
+const SetupStepper = ({ currentStep, setStep }) => {
+    const steps = [
+        { id: 1, name: 'Portal del Cliente', icon: PaintBrushIcon },
+        { id: 2, name: 'Tus Restaurantes', icon: BuildingStorefrontIcon },
+        { id: 3, name: 'Resumen y Finalizar', icon: CheckCircleIcon }
+    ];
+    return (
+        <nav className="space-y-1 p-4" aria-label="Setup Steps">
+            {steps.map(step => (
+                <button
+                    key={step.name}
+                    onClick={() => setStep(step.id)}
+                    disabled={step.id > currentStep}
+                    className={`group flex w-full items-center rounded-md p-3 text-sm font-medium transition-colors disabled:opacity-50 ${
+                        currentStep === step.id
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-700 dark:text-slate-300 hover:bg-gray-200 dark:hover:bg-slate-700'
+                    }`}
+                >
+                    <step.icon className={`mr-3 h-6 w-6 flex-shrink-0 ${currentStep === step.id ? 'text-white' : 'text-gray-400 dark:text-slate-500 group-hover:text-gray-500'}`} />
+                    <span>{step.name}</span>
                 </button>
-              </div>
-            </section>
-          )}
+            ))}
+        </nav>
+    );
+};
+
+// Componente de Acordeón para agrupar campos
+const Accordion = ({ title, icon: Icon, children }) => {
+    const [isOpen, setIsOpen] = useState(true);
+    return (
+        <div className="border border-gray-200 dark:border-slate-700 rounded-xl overflow-hidden">
+            <button onClick={() => setIsOpen(!isOpen)} className="w-full flex justify-between items-center p-4 bg-gray-50 dark:bg-slate-800/50">
+                <div className="flex items-center gap-3">
+                    <Icon className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                    <span className="font-semibold text-gray-800 dark:text-slate-200">{title}</span>
+                </div>
+                <ChevronRightIcon className={`w-5 h-5 text-gray-500 transition-transform ${isOpen ? 'rotate-90' : ''}`} />
+            </button>
+            <AnimatePresence>
+                {isOpen && (
+                    <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                    >
+                        <div className="p-6 space-y-4">{children}</div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
-      </div>
-      <ToastContainer theme={darkMode ? 'dark' : 'light'} position="top-right" autoClose={4000} />
-    </div>
-  );
+    );
+};
+
+// --- COMPONENTE PRINCIPAL ---
+/**
+ * RestaurantSetup - Reimaginado como un asistente (wizard) guiado y amigable.
+ * * Estrategia de UX/UI:
+ * 1.  Wizard con Navegación Lateral: Se reemplaza el formulario largo por un layout de "wizard" con
+ * un stepper vertical. Esto reduce la carga cognitiva y le da al usuario un "mapa" constante de su progreso.
+ * 2.  Gestión de Complejidad con Pestañas: Para manejar múltiples restaurantes, se usa una interfaz de
+ * pestañas. Esto evita una página vertical interminable y mantiene el contexto de cada restaurante aislado y claro.
+ * 3.  Organización con Acordeones: Dentro de cada formulario de restaurante, los campos se agrupan en
+ * secciones plegables (Datos Fiscales, Conexión). El usuario puede enfocarse en una tarea a la vez.
+ * 4.  Simplicidad y Enfoque en el Diseño: La lógica de backend se simula para permitir un enfoque total
+ * en crear una experiencia de usuario fluida, intuitiva y profesional para un proceso inherentemente complejo.
+ */
+function RestaurantSetup() {
+    const { darkMode } = useThemeContext();
+    const navigate = useNavigate();
+    const [currentStep, setCurrentStep] = useState(1);
+    const [restaurants, setRestaurants] = useState([initialRestaurant]);
+    const [activeRestaurantId, setActiveRestaurantId] = useState(restaurants[0].id);
+    const [portalConfig, setPortalConfig] = useState({
+        portalName: 'Facturación El Sazón Porteño',
+        subdomain: 'sazon-porteno',
+        primaryColor: '#005DAB'
+    });
+    
+    // Simulación de handlers
+    const handleNext = () => setCurrentStep(s => Math.min(s + 1, 3));
+    const handlePrev = () => setCurrentStep(s => Math.max(s - 1, 1));
+    const handleFinalSubmit = () => {
+        alert('¡Configuración guardada con éxito! (Simulado)');
+        navigate('/dashboard');
+    };
+    
+    const addRestaurant = () => {
+        const newRestaurant = { ...initialRestaurant, id: Date.now(), name: `Sucursal ${restaurants.length + 1}` };
+        setRestaurants(prev => [...prev, newRestaurant]);
+        setActiveRestaurantId(newRestaurant.id);
+    };
+
+    const removeRestaurant = (idToRemove) => {
+        const newRestaurants = restaurants.filter(r => r.id !== idToRemove);
+        setRestaurants(newRestaurants);
+        if (activeRestaurantId === idToRemove) {
+            setActiveRestaurantId(newRestaurants[0]?.id || null);
+        }
+    };
+    
+    const activeRestaurant = restaurants.find(r => r.id === activeRestaurantId);
+
+    return (
+        <div className={`min-h-screen font-sans ${darkMode ? 'dark bg-slate-900 text-white' : 'bg-white text-black'}`}>
+            <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+                {/* Encabezado */}
+                <div className="mb-8">
+                    <h1 className="text-3xl font-bold tracking-tight">Asistente de Configuración</h1>
+                    <p className="mt-1 text-gray-600 dark:text-slate-400">Sigue estos pasos para dejar tu cuenta lista y funcionando.</p>
+                </div>
+
+                {/* Layout del Wizard */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                    {/* Stepper Lateral */}
+                    <aside className="lg:col-span-3">
+                        <div className="sticky top-8">
+                           <SetupStepper currentStep={currentStep} setStep={setCurrentStep} />
+                        </div>
+                    </aside>
+
+                    {/* Área de Contenido del Paso Actual */}
+                    <main className="lg:col-span-9">
+                        <AnimatePresence mode="wait">
+                            <motion.div
+                                key={currentStep}
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: -20 }}
+                                transition={{ duration: 0.3 }}
+                            >
+                                {/* PASO 1: PORTAL */}
+                                {currentStep === 1 && (
+                                    <Card title="Configuración del Portal de Clientes">
+                                        <p className="text-sm text-gray-500 dark:text-slate-400 mb-6">Personaliza la página donde tus clientes generarán sus facturas.</p>
+                                        <div className="space-y-4">
+                                           {/* Inputs para portalName, subdomain, primaryColor, etc. */}
+                                            <InputField icon={GlobeAltIcon} label="Nombre del Portal" value={portalConfig.portalName} />
+                                            <InputField icon={TagIcon} label="Subdominio" value={portalConfig.subdomain} addon=".nextmanager.com.mx" />
+                                            <InputField icon={PhotoIcon} label="URL del Logo" placeholder="https://ejemplo.com/logo.png" />
+                                            <div className="flex items-center gap-4">
+                                                <label className="text-sm font-medium">Color de Marca</label>
+                                                <input type="color" value={portalConfig.primaryColor} onChange={e => setPortalConfig({...portalConfig, primaryColor: e.target.value})} className="w-10 h-10"/>
+                                            </div>
+                                        </div>
+                                    </Card>
+                                )}
+                                
+                                {/* PASO 2: RESTAURANTES */}
+                                {currentStep === 2 && (
+                                     <Card title="Configura tus Restaurantes">
+                                         {/* Pestañas para cada restaurante */}
+                                        <div className="border-b border-gray-200 dark:border-slate-700 mb-6">
+                                            <nav className="-mb-px flex space-x-4 overflow-x-auto">
+                                                {restaurants.map(r => (
+                                                    <button key={r.id} onClick={() => setActiveRestaurantId(r.id)}
+                                                        className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-sm transition-colors ${activeRestaurantId === r.id ? 'border-blue-500 text-blue-600' : 'border-transparent text-gray-500 hover:border-gray-300'}`}>
+                                                        {r.name || `Restaurante ${restaurants.findIndex(res => res.id === r.id) + 1}`}
+                                                    </button>
+                                                ))}
+                                                <button onClick={addRestaurant} className="whitespace-nowrap py-3 px-2 text-sm font-medium text-blue-500 hover:text-blue-700 flex items-center gap-1"><PlusIcon className="w-4 h-4" /> Añadir</button>
+                                            </nav>
+                                        </div>
+
+                                        {/* Formulario del restaurante activo */}
+                                        {activeRestaurant && (
+                                            <div className="space-y-6">
+                                                <div className="flex justify-between items-center">
+                                                    <h3 className="text-xl font-semibold">Editando: {activeRestaurant.name}</h3>
+                                                    {restaurants.length > 1 && <button onClick={() => removeRestaurant(activeRestaurantId)} className="flex items-center gap-2 text-sm text-red-500 hover:text-red-700"><TrashIcon className="w-4 h-4"/> Eliminar</button>}
+                                                </div>
+                                                <InputField icon={BuildingStorefrontIcon} label="Nombre Comercial" placeholder="Ej. El Sazón Porteño (Centro)" />
+                                                <InputField icon={MapPinIcon} label="Dirección" placeholder="Av. Principal #123, Col. Centro" />
+                                                
+                                                <Accordion title="Datos Fiscales" icon={ReceiptPercentIcon}>
+                                                    <InputField icon={TagIcon} label="RFC" placeholder="XAXX010101000" />
+                                                    <InputField icon={MapPinIcon} label="Dirección Fiscal" placeholder="CP, Ciudad, Estado" />
+                                                    {/* FileUploads y password de CSD irían aquí */}
+                                                </Accordion>
+
+                                                <Accordion title="Conexión a SoftRestaurant (Opcional)" icon={CircleStackIcon}>
+                                                    <InputField icon={CpuChipIcon} label="Host / IP del Servidor" placeholder="192.168.1.100" />
+                                                     {/* Otros campos de BD irían aquí */}
+                                                </Accordion>
+                                            </div>
+                                        )}
+                                     </Card>
+                                )}
+                                
+                                {/* PASO 3: RESUMEN */}
+                                {currentStep === 3 && (
+                                    <Card title="Resumen y Finalizar">
+                                        <p className="text-sm text-gray-500 dark:text-slate-400 mb-6">Revisa que toda la información sea correcta antes de guardar.</p>
+                                        <div className="space-y-4">
+                                            <div><h4 className="font-semibold">Portal:</h4><p className="text-gray-600 dark:text-slate-300">{portalConfig.portalName} en <span className="font-mono text-blue-500">{portalConfig.subdomain}.nextmanager.com.mx</span></p></div>
+                                            <div><h4 className="font-semibold">Restaurantes ({restaurants.length}):</h4><p className="text-gray-600 dark:text-slate-300">{restaurants.map(r => r.name || 'Sin Nombre').join(', ')}</p></div>
+                                        </div>
+                                    </Card>
+                                )}
+                                
+                                {/* Controles de Navegación del Wizard */}
+                                <div className="mt-8 flex justify-between">
+                                    {currentStep > 1 ? (
+                                        <button onClick={handlePrev} className="bg-gray-200 dark:bg-slate-700 text-gray-800 dark:text-slate-200 font-semibold py-2 px-4 rounded-lg">Anterior</button>
+                                    ) : <div />}
+                                    
+                                    {currentStep < 3 ? (
+                                        <button onClick={handleNext} className="bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg">Siguiente</button>
+                                    ) : (
+                                        <button onClick={handleFinalSubmit} className="bg-green-600 text-white font-semibold py-2 px-4 rounded-lg">Finalizar y Guardar</button>
+                                    )}
+                                </div>
+
+                            </motion.div>
+                        </AnimatePresence>
+                    </main>
+                </div>
+            </div>
+        </div>
+    );
 }
+
+// Componente de tarjeta genérico
+const Card = ({ title, children }) => (
+    <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-sm">
+        <div className="p-6 border-b border-gray-200 dark:border-slate-700">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h2>
+        </div>
+        <div className="p-6">{children}</div>
+    </div>
+);
+
+// Componente de input genérico
+const InputField = ({ icon: Icon, label, addon, ...props }) => (
+    <div>
+        <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">{label}</label>
+        <div className="relative">
+            {Icon && <Icon className="pointer-events-none w-5 h-5 absolute top-1/2 transform -translate-y-1/2 left-3 text-gray-400" />}
+            <input 
+                {...props}
+                className={`w-full py-2 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-lg focus:ring-2 focus:ring-blue-500 transition-colors ${Icon ? 'pl-10' : 'pl-4'} ${addon ? 'pr-48' : 'pr-4'}`}
+            />
+            {addon && <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-sm text-gray-500 dark:text-slate-400">{addon}</span>}
+        </div>
+    </div>
+);
 
 export default RestaurantSetup;
