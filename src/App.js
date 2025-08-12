@@ -22,9 +22,9 @@ import ProtectedRoute from './pages/ProtectedRoute'; // El guardián de rutas
 import HomePage from './pages/HomePage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage'; // Página para el endpoint /register
-import ForgotPasswordPage from './pages/ForgotPasswordPage'; // Página para /password/forgot
-import ResetPasswordPage from './pages/ResetPasswordPage'; // Página para /password/reset
-import DashboardPage from './pages/DashboardPage';
+import ForgotPasswordPage from './pages/ForgotPassword'; // Página para /password/forgot
+import ResetPasswordPage from './pages/ResetPassword'; // Página para /password/reset
+import DashboardPage from './pages/Dashboard';
 import PlanSelection from './pages/PlanSelection';
 import RestaurantSetup from './pages/RestaurantSetup';
 import SuperAdminPanel from './components/SuperAdminPanel';
