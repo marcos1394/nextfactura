@@ -24,15 +24,20 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage'; // Página para el endpoint /register
 import ForgotPasswordPage from './pages/ForgotPassword'; // Página para /password/forgot
 import ResetPasswordPage from './pages/ResetPassword'; // Página para /password/reset
-import DashboardPage from './pages/Dashboard';
+import DashboardPage from './pages/DashboardPage';
 import PlanSelection from './pages/PlanSelection';
 import RestaurantSetup from './pages/RestaurantSetup';
 import SuperAdminPanel from './components/SuperAdminPanel';
 import EnableTwoFactorPage from './pages/EnableTwoFactor';
 import PaymentGateway from './pages/PaymentGateway';
+import AdminPage from './pages/AdminPage';
+import HelpCenterPage from './pages/HelpCenterPage';
+import ContactPage from './pages/ContactPage';
+import NotFoundPage from './pages/NotFoundPage';
 import PaymentSuccess from './pages/PaymentSuccess';
 import PaymentFailure from './pages/PaymentFailure';
 import PaymentPending from './pages/PaymentPending';
+import UserProfile from './pages/UserProfile';
 import TicketSearch from './pages/TicketPage';
 import UnauthorizedPage from './pages/UnauthorizedPage'; // Página para accesos no permitidos
 
