@@ -1,11 +1,11 @@
-// src/pages/PaymentPendingPage.js
+// src/pages/PaymentPending.js
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
 import { ClockIcon, ShieldCheckIcon } from '@heroicons/react/24/solid';
 
 /**
- * PaymentPendingPage - Transforma la espera ansiosa en una pausa confiable.
+ * PaymentPending - Transforma la espera ansiosa en una pausa confiable.
  * * Estrategia de UX/UI:
  * 1.  Entorno de Marca Consistente: El uso del layout de dos paneles mantiene al usuario dentro de un
  * entorno familiar y seguro, crucial durante la espera de una confirmación financiera.
@@ -16,7 +16,8 @@ import { ClockIcon, ShieldCheckIcon } from '@heroicons/react/24/solid';
  * 4.  Panel de Reafirmación: El panel derecho está dedicado a mensajes que calman la ansiedad,
  * recordando al usuario la seguridad del proceso y agradeciéndole su paciencia.
  */
-function PaymentPendingPage() {
+// El nombre de la función ahora es 'PaymentPending' para coincidir con el export
+function PaymentPending() { 
     const { darkMode } = useThemeContext();
 
     // Variante para la animación de los círculos pulsantes
@@ -112,4 +113,5 @@ function PaymentPendingPage() {
     );
 }
 
+// La exportación ahora coincide con el nombre de la función
 export default PaymentPending;
