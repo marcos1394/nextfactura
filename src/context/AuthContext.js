@@ -1,65 +1,84 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
-import axios from 'axios';
+// src/context/AuthContext.js
 
-// 1. Creamos el Contexto
-const AuthContext = createContext(null);
+import React, { createContext, useState, useEffect, useCallback } from 'react';
+import api from '../services/api'; // Importamos nuestro cliente API centralizado
 
-// 2. Creamos el "Proveedor" que envolverá nuestra App
+// --- EXPORTAMOS EL CONTEXTO ---
+// Este 'export' es crucial para que otros archivos puedan importarlo.
+export const AuthContext = createContext(null);
+
+// --- EXPORTAMOS EL PROVEEDOR ---
+// Este es el componente que envolverá tu aplicación.
 export const AuthProvider = ({ children }) => {
-    const [user, setUser] = useState(null);
-    const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [user, setUser] = useState(null);
+  const [isLoading, setIsLoading] = useState(true); // Para manejar el estado de carga inicial
 
-    // Efecto para verificar el token al cargar la app
-    useEffect(() => {
-        if (token) {
-            // Aquí deberías verificar que el token sea válido contra tu backend
-            // Por ahora, asumiremos que si hay token, hay un usuario (simplificación)
-            // En un caso real, harías una llamada a /api/auth/me para obtener los datos del usuario
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-            // Simulación de datos de usuario
-            setUser({ email: 'usuario@cargado.com' }); // Reemplazar con datos reales del backend
-        }
-    }, [token]);
+  // Función para validar un token y obtener los datos del usuario
+  const verifyAuth = useCallback(async () => {
+    const token = localStorage.getItem('token');
+    
+    if (!token) {
+      setIsLoading(false);
+      return;
+    }
 
-    // Función para iniciar sesión
-    const login = async (email, password) => {
-        try {
-            // Llamada a tu NUEVO backend para autenticar
-            const response = await axios.post('/api/auth/login', { email, password });
-            const { token, userData } = response.data;
-
-            localStorage.setItem('token', token);
-            setToken(token);
-            setUser(userData);
-            axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-        } catch (error) {
-            console.error("Error en el login:", error);
-            // Aquí puedes manejar el error, por ejemplo, con toast.error()
-            throw error;
-        }
-    };
-
-    // Función para cerrar sesión
-    const logout = () => {
+    try {
+      // Hacemos una llamada a tu endpoint '/me' para validar el token
+      const response = await api.get('/auth/me'); 
+      
+      if (response.data.success) {
+        setUser(response.data.user); // Guardamos los datos del usuario
+      } else {
         localStorage.removeItem('token');
-        setToken(null);
         setUser(null);
-        delete axios.defaults.headers.common['Authorization'];
-    };
+      }
+    } catch (error) {
+      console.error("Fallo la verificación de la sesión:", error.response?.data?.message || error.message);
+      // Si el token es inválido o expirado, lo limpiamos
+      localStorage.removeItem('token');
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-    // Valor que proveerá el contexto
-    const value = {
-        user,
-        token,
-        isAuthenticated: !!user, // Booleano para saber si está autenticado
-        login,
-        logout
-    };
+  // Al cargar la aplicación, verificamos si existe una sesión válida
+  useEffect(() => {
+    verifyAuth();
+  }, [verifyAuth]);
 
-    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+  // Función para iniciar sesión
+  const login = async (email, password) => {
+    const response = await api.post('/auth/login', { email, password });
+    const { token } = response.data;
+    
+    localStorage.setItem('token', token);
+    
+    // Después de guardar el token, verificamos la sesión para obtener los datos del usuario
+    await verifyAuth(); 
+  };
 
-// 3. Creamos un "Hook" personalizado para usar el contexto fácilmente
-export const useAuth = () => {
-    return useContext(AuthContext);
+  // Función para cerrar sesión (backend y frontend)
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      console.error("Error al hacer logout en el backend:", error.response?.data?.message || error.message);
+    } finally {
+      // Limpiamos todo en el lado del cliente, sin importar si el backend falló
+      localStorage.removeItem('token');
+      setUser(null);
+    }
+  };
+
+  // El valor que será accesible por toda la aplicación
+  const value = {
+    user,
+    isAuthenticated: !!user,
+    isLoading,
+    login,
+    logout,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
