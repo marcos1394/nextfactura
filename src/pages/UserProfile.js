@@ -1,6 +1,6 @@
 // src/pages/UserProfile.js
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 // Usaremos un set de iconos consistente y de alta calidad
