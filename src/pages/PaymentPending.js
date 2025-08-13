@@ -1,6 +1,6 @@
 // src/pages/PaymentPendingPage.js
 import React from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
 import { ClockIcon, ShieldCheckIcon } from '@heroicons/react/24/solid';
 
