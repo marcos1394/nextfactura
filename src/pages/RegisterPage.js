@@ -2,12 +2,14 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useThemeContext } from '../context/ThemeContext'; // Asumiendo que existe
-
-// Importamos iconos para cada campo, mejorando la guía visual
+import { useThemeContext } from '../context/ThemeContext';
 import { UserIcon, EnvelopeIcon, LockClosedIcon, BuildingStorefrontIcon, PhoneIcon, CheckCircleIcon, XCircleIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
 
-// Componente para la barra de progreso
+// --- Imports para la conexión al Backend ---
+import api from '../services/api'; // <-- NUEVO: Importamos nuestro cliente API
+import { toast } from 'react-toastify'; // <-- NUEVO: Para notificaciones de éxito/error
+
+// Componente para la barra de progreso (sin cambios)
 const ProgressBar = ({ currentStep, totalSteps }) => {
     const progressPercentage = ((currentStep - 1) / (totalSteps - 1)) * 100;
     return (
@@ -22,7 +24,7 @@ const ProgressBar = ({ currentStep, totalSteps }) => {
     );
 };
 
-// Componente para los criterios de la contraseña
+// Componente para los criterios de la contraseña (sin cambios)
 const PasswordCriteria = ({ criteria }) => (
     <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs mt-2">
         {Object.entries(criteria).map(([key, { valid, label }]) => (
@@ -34,21 +36,14 @@ const PasswordCriteria = ({ criteria }) => (
     </div>
 );
 
-/**
- * RegisterPage - Rediseñada con una estrategia de UX de divulgación progresiva.
- * * Estrategia de UX/UI:
- * 1.  Formulario Multi-paso: Se divide el registro en 3 pasos lógicos para reducir la carga cognitiva
- * y hacer que el proceso parezca menos abrumador. Esto aumenta drásticamente la tasa de finalización.
- * 2.  Gestión de Expectativas: La barra de progreso visual informa al usuario sobre su avance,
- * eliminando la incertidumbre y motivándolo a continuar.
- * 3.  Experiencia de Marca Consistente: Se reutiliza el layout de dos paneles de la página de inicio de
- * sesión para crear una experiencia de usuario unificada y profesional.
- * 4.  Feedback Interactivo: Los criterios de la contraseña y los estados de los botones proporcionan
- * una retroalimentación clara e instantánea, guiando al usuario sin esfuerzo.
- */
+
 function RegisterPage() {
     const { darkMode } = useThemeContext();
     const navigate = useNavigate();
+
+    // --- NUEVOS ESTADOS para manejar la interacción con la API ---
+    const [isLoading, setIsLoading] = useState(false); // <-- NUEVO
+    const [error, setError] = useState(null);       // <-- NUEVO
 
     const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState({
@@ -88,18 +83,49 @@ function RegisterPage() {
 
     const isStep2Valid = () => formData.restaurantName.trim() !== '';
 
-    // --- MANEJADORES DE NAVEGACIÓN Y ENVÍO (SIMULADOS) ---
+    // --- MANEJADORES DE NAVEGACIÓN (sin cambios) ---
     const handleNextStep = () => setCurrentStep(prev => prev + 1);
     const handlePrevStep = () => setCurrentStep(prev => prev - 1);
-    const handleFinalSubmit = (e) => {
+
+    // --- FUNCIÓN DE ENVÍO FINAL (COMPLETAMENTE REESCRITA) ---
+    const handleFinalSubmit = async (e) => { // <-- Se convierte en función asíncrona
         e.preventDefault();
         if (!formData.termsAccepted) {
-            alert('Debes aceptar los términos y condiciones.');
+            toast.warn('Debes aceptar los términos y condiciones.');
             return;
         }
-        console.log('REGISTRO SIMULADO ENVIADO:', formData);
-        alert('¡Registro exitoso! Serás redirigido.');
-        navigate('/plans'); // Redirigir al usuario a seleccionar un plan tras el registro
+
+        // Reseteamos estados
+        setError(null);
+        setIsLoading(true);
+
+        try {
+            // Preparamos los datos que espera tu backend
+            const payload = {
+                name: formData.name,
+                email: formData.email,
+                password: formData.password,
+                restaurantName: formData.restaurantName,
+            };
+            
+            // Hacemos la llamada a la API
+            await api.post('/auth/register', payload);
+
+            // Si todo sale bien...
+            toast.success('¡Registro exitoso! Por favor, inicia sesión.');
+            navigate('/login'); // Redirigimos al login para que el usuario entre
+
+        } catch (err) {
+            // Si el backend devuelve un error...
+            const errorMessage = err.response?.data?.message || 'Ocurrió un error inesperado. Inténtalo de nuevo.';
+            setError(errorMessage); // Guardamos el error para mostrarlo
+            toast.error(errorMessage);
+            console.error('Error en el registro:', err);
+
+        } finally {
+            // Pase lo que pase, dejamos de cargar
+            setIsLoading(false);
+        }
     };
 
     const slideVariants = {
@@ -142,6 +168,7 @@ function RegisterPage() {
                                     {/* --- PASO 1: CUENTA --- */}
                                     {currentStep === 1 && (
                                         <div className="space-y-5">
+                                            {/* ... (el contenido del formulario del paso 1 no cambia) ... */}
                                             <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Crea tu Cuenta</h1>
                                             <p className="text-gray-600 dark:text-gray-400">Empecemos con tus datos básicos.</p>
                                             <div className="relative">
@@ -170,6 +197,7 @@ function RegisterPage() {
                                     {/* --- PASO 2: NEGOCIO --- */}
                                     {currentStep === 2 && (
                                         <div className="space-y-5">
+                                             {/* ... (el contenido del formulario del paso 2 no cambia) ... */}
                                              <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Sobre tu Restaurante</h1>
                                             <p className="text-gray-600 dark:text-gray-400">Esta información nos ayudará a personalizar tu experiencia.</p>
                                             <div className="relative">
@@ -186,7 +214,8 @@ function RegisterPage() {
                                     {/* --- PASO 3: CONFIRMACIÓN --- */}
                                     {currentStep === 3 && (
                                         <div className="space-y-6">
-                                             <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Último Paso</h1>
+                                            {/* ... (el contenido del formulario del paso 3 no cambia) ... */}
+                                            <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Último Paso</h1>
                                             <p className="text-gray-600 dark:text-gray-400">Revisa que todo esté correcto y acepta nuestros términos de servicio para finalizar.</p>
                                             <div className="flex items-start">
                                                 <input id="terms" name="termsAccepted" type="checkbox" checked={formData.termsAccepted} onChange={handleChange} className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-1" />
@@ -207,13 +236,29 @@ function RegisterPage() {
                             ) : <div />}
                             
                             {currentStep < 3 && (
-                                <button type="button" onClick={() => {setDirection(1); handleNextStep();}} disabled={currentStep === 1 ? !isStep1Valid() : !isStep2Valid()} className="py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed">Siguiente</button>
+                                <button type="button" onClick={() => {setDirection(1); handleNextStep();}} disabled={currentStep === 1 ? !isStep1Valid() : !isStep2Valid()} className="py-3 px-6 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors">Siguiente</button>
                             )}
                             
                             {currentStep === 3 && (
-                                <button type="button" onClick={handleFinalSubmit} disabled={!formData.termsAccepted} className="py-3 px-6 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed">Crear Cuenta</button>
+                                <button type="button" onClick={handleFinalSubmit} disabled={!formData.termsAccepted || isLoading} className="py-3 px-6 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow-md disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors">
+                                    {isLoading ? 'Creando Cuenta...' : 'Crear Cuenta'}
+                                </button> // <-- MODIFICADO para mostrar estado de carga
                             )}
                         </div>
+
+                        {/* --- Div para mostrar el mensaje de error --- */}
+                        <AnimatePresence>
+                            {error && (
+                                <motion.div
+                                    className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center"
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                >
+                                    {error}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         <p className="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
                             ¿Ya tienes una cuenta?{' '}
