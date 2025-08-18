@@ -1,13 +1,15 @@
 // src/pages/LoginPage.js
-import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import { useThemeContext } from '../context/ThemeContext'; // Mantenemos el contexto del tema
 
-// Importamos iconos para una UI más rica
+import React, { useState } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useThemeContext } from '../context/ThemeContext';
+import { useAuth } from '../hooks/useAuth'; // <-- NUEVO: Importamos nuestro hook de autenticación
+import { toast } from 'react-toastify'; // <-- NUEVO: Para notificaciones
+
 import { EnvelopeIcon, LockClosedIcon } from '@heroicons/react/24/solid';
 
-// Un componente simple para el botón de Google para mantener el código limpio
+// Componente para el botón de Google
 const GoogleLoginButton = ({ onClick }) => (
     <button
         type="button"
@@ -24,43 +26,53 @@ const GoogleLoginButton = ({ onClick }) => (
     </button>
 );
 
-
-/**
- * LoginPage - Rediseñada para una experiencia de marca inmersiva y una UX superior.
- * * Estrategia de UX/UI:
- * 1.  Layout de Doble Panel: Se abandona el simple cuadro de diálogo para crear una experiencia de
- * pantalla dividida. El panel derecho refuerza la marca y el valor del producto, mientras que el
- * izquierdo se enfoca en la tarea de iniciar sesión.
- * 2.  Jerarquía y Guía Visual: Se añaden iconos a los campos de entrada, un enlace claro para recuperar
- * la contraseña y una invitación para nuevos usuarios. Esto resuelve puntos de fricción comunes.
- * 3.  Enfoque en el Diseño: La lógica de backend se ha extraído para centrarse puramente en la UI.
- * Las animaciones sutiles y los estilos cuidados crean una sensación de aplicación premium y moderna.
- */
 function LoginPage() {
     const { darkMode } = useThemeContext();
     const navigate = useNavigate();
+    const location = useLocation();
+    const { login } = useAuth(); // <-- NUEVO: Obtenemos la función de login de nuestro contexto
 
-    // Estados simplificados solo para la UI
+    // --- NUEVOS ESTADOS para manejar la interacción con la API ---
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState(null);
 
-    // --- MANEJADORES SIMULADOS ---
-    // En un entorno real, aquí irían las llamadas a tu API.
-    const handleLogin = (e) => {
+    // Determina a dónde redirigir al usuario después de un login exitoso
+    const from = location.state?.from?.pathname || '/dashboard';
+
+    // --- MANEJADOR DE LOGIN REAL ---
+    const handleLogin = async (e) => {
         e.preventDefault();
         if (!email || !password) {
-            alert('Por favor, completa todos los campos.'); // Usamos alert simple para demo
+            toast.warn('Por favor, completa todos los campos.');
             return;
         }
-        console.log('Simulando inicio de sesión con:', { email, password });
-        // Redirigir a un dashboard al simular éxito
-        navigate('/dashboard');
+        
+        setError(null);
+        setIsLoading(true);
+
+        try {
+            // Llamamos a la función login de nuestro AuthContext
+            await login(email, password);
+            toast.success('¡Bienvenido de nuevo!');
+            navigate(from, { replace: true }); // Redirigimos a la página original o al dashboard
+
+        } catch (err) {
+            const errorMessage = err.response?.data?.message || 'Credenciales inválidas o error de conexión.';
+            setError(errorMessage);
+            toast.error(errorMessage);
+            console.error('Error en el login:', err);
+
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const handleGoogleSuccess = () => {
-        console.log('Simulando inicio de sesión exitoso con Google.');
-        // Redirigir a un dashboard al simular éxito
-        navigate('/dashboard');
+    // --- MANEJADOR DE LOGIN CON GOOGLE REAL ---
+    const handleGoogleLogin = () => {
+        // Esta es la URL de tu backend que inicia el flujo de OAuth con Google
+        window.location.href = '/api/auth/google'; 
     };
 
     return (
@@ -76,7 +88,6 @@ function LoginPage() {
                         transition={{ duration: 0.7, ease: "easeOut" }}
                     >
                         <Link to="/" className="mb-8 inline-block">
-                            {/* Inserta tu logo aquí */}
                             <img src="/logo-nextmanager.svg" alt="NextManager Logo" className="h-10" />
                         </Link>
 
@@ -119,19 +130,35 @@ function LoginPage() {
                                     <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900 dark:text-gray-300">Recuérdame</label>
                                 </div>
                                 <div className="text-sm">
-                                    <a href="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
+                                    <Link to="/forgot-password" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
                                         ¿Olvidaste tu contraseña?
-                                    </a>
+                                    </Link>
                                 </div>
                             </div>
 
+                            {/* --- Botón de Login dinámico --- */}
                             <button
                                 type="submit"
-                                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300"
+                                disabled={isLoading}
+                                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 disabled:bg-gray-400 disabled:cursor-not-allowed"
                             >
-                                Iniciar Sesión
+                                {isLoading ? 'Iniciando Sesión...' : 'Iniciar Sesión'}
                             </button>
                         </form>
+                        
+                        {/* --- Div para mostrar el mensaje de error --- */}
+                        <AnimatePresence>
+                            {error && (
+                                <motion.div
+                                    className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg text-center"
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -10 }}
+                                >
+                                    {error}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
 
                         <div className="mt-6 relative">
                             <div className="absolute inset-0 flex items-center" aria-hidden="true">
@@ -143,12 +170,12 @@ function LoginPage() {
                         </div>
 
                         <div className="mt-6">
-                            <GoogleLoginButton onClick={handleGoogleSuccess} />
+                            <GoogleLoginButton onClick={handleGoogleLogin} />
                         </div>
 
                         <p className="mt-8 text-center text-sm text-gray-600 dark:text-gray-400">
                             ¿No tienes una cuenta?{' '}
-                            <Link to="/signup" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
+                            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500 dark:text-blue-400 dark:hover:text-blue-300">
                                 Regístrate ahora
                             </Link>
                         </p>
