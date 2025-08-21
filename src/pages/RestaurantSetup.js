@@ -5,7 +5,6 @@ import {
     MapPinIcon,
     TagIcon,
     ReceiptPercentIcon,
-    CircleStackIcon,
     CpuChipIcon,
     PlusIcon,
     TrashIcon,
