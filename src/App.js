@@ -17,7 +17,7 @@ import { useAuth } from './hooks/useAuth';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import ProtectedRoute from './pages/ProtectedRoute';
-import AuthRedirector from './pages/AuthRedirector'; // <-- Componente clave para el flujo
+import AuthRedirector from './pages/AuthRedirector';
 
 // --- Imports de Páginas ---
 import HomePage from './pages/HomePage';
@@ -36,7 +36,7 @@ import PaymentFailure from './pages/PaymentFailure';
 import PaymentPending from './pages/PaymentPending';
 import TicketSearch from './pages/TicketPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
-import NotFoundPage from './pages/NotFoundPage'; // Es bueno tener una página 404
+import NotFoundPage from './pages/NotFoundPage';
 
 // --- Imports de Notificaciones ---
 import { ToastContainer } from 'react-toastify';
@@ -56,7 +56,7 @@ const AppLayout = ({ children }) => (
 // Componente principal que orquesta toda la aplicación
 function App() {
   const { isAuthenticated } = useAuth();
-  console.log(`[App.js] Estado de autenticación: ${isAuthenticated}`); // <-- LOG PARA VERIFICAR ESTADO
+  console.log(`[App.js] Estado de autenticación: ${isAuthenticated}`);
 
   return (
     <ThemeProvider>
@@ -81,11 +81,7 @@ function App() {
 
             {/* --- RUTAS PROTEGIDAS (Requieren inicio de sesión) --- */}
             <Route element={<ProtectedRoute />}>
-              {/* Esta es la ruta principal del área protegida.
-                  AuthRedirector decide a dónde enviar al usuario. */}
               <Route index element={<AuthRedirector />} />
-              
-              {/* Rutas estándar para usuarios logueados */}
               <Route path="dashboard" element={<DashboardPage />} />
               <Route path="plans" element={<PlanSelection />} />
               <Route path="restaurantconfig" element={<RestaurantSetup />} />
@@ -98,7 +94,9 @@ function App() {
               {/* Rutas de SuperAdmin (protegidas por rol) */}
               <Route element={<ProtectedRoute allowedRoles={['SuperAdmins']} />}>
                 <Route path="admindashboard" element={<SuperAdminPanel />} />
-                {/* ...otras rutas de admin ... */}
+                <Route path="adminusers" element={<SuperAdminPanel />} />
+                <Route path="adminplans" element={<SuperAdminPanel />} />
+                <Route path="adminpayments" element={<SuperAdminPanel />} />
               </Route>
             </Route>
             
