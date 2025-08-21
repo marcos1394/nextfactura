@@ -113,12 +113,13 @@ function PlanSelection() {
 
     const handlePlanSelect = (plan) => {
         const selectedOption = {
-            product: plan.name,
-            name: `Plan ${billingCycle === 'monthly' ? 'Mensual' : 'Anual'}`,
-            price: plan.price[billingCycle],
-            period: billingCycle,
-            features: plan.features,
-        };
+        id: plan.id, // <-- ¡LA LÍNEA CLAVE QUE FALTABA!
+        product: plan.name,
+        name: `Plan ${billingCycle === 'monthly' ? 'Mensual' : 'Anual'}`,
+        price: plan.price[billingCycle],
+        period: billingCycle,
+        features: plan.features,
+    };
         navigate('/payment', { state: { selectedPlan: selectedOption } });
     };
 
