@@ -6,9 +6,15 @@ import { useThemeContext } from '../context/ThemeContext';
 import { CheckIcon, PlusIcon, MinusIcon } from '@heroicons/react/24/solid';
 
 // --- ESTRUCTURA DE DATOS REFACTORIZADA Y SIMPLIFICADA ---
+// src/pages/PlanSelection.js
+
 const plansData = [
   {
-    id: 'nexfactura',
+    // Objeto con los IDs únicos para cada ciclo
+    ids: {
+      monthly: 'a1b2c3d4-e5f6-7890-1234-100000000001',
+      annually: 'a1b2c3d4-e5f6-7890-1234-200000000001',
+    },
     name: 'NexFactura',
     description: 'Ideal para quienes solo necesitan facturación automática y eficiente.',
     price: { monthly: 450, annually: 4150 },
@@ -21,7 +27,10 @@ const plansData = [
     isHighlighted: false,
   },
   {
-    id: 'nextmanager_completo',
+    ids: {
+      monthly: 'b1c2d3e4-f5a6-b7c8-d9e0-100000000002',
+      annually: 'b1c2d3e4-f5a6-b7c8-d9e0-200000000002',
+    },
     name: 'Paquete Completo',
     description: 'La solución definitiva. Todo el poder de facturación y gestión en un solo lugar.',
     price: { monthly: 800, annually: 7500 },
@@ -36,7 +45,10 @@ const plansData = [
     isHighlighted: true,
   },
   {
-    id: 'nextmanager',
+    ids: {
+      monthly: 'c1d2e3f4-a5b6-c7d8-e9f0-100000000003',
+      annually: 'c1d2e3f4-a5b6-c7d8-e9f0-200000000003',
+    },
     name: 'NextManager',
     description: 'Perfecto para gerentes que buscan análisis y control total de sus ventas.',
     price: { monthly: 430, annually: 3950 },
