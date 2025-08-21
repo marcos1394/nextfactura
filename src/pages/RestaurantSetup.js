@@ -15,7 +15,7 @@ import {
     DocumentIcon,
     KeyIcon,
     ServerIcon,
-    DatabaseIcon,
+    CircleStackIcon,
     UserIcon,
     LockClosedIcon,
     GlobeAltIcon,
@@ -469,7 +469,7 @@ const RestaurantSetup = () => {
 
                                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                                     <InputField 
-                                                                        icon={DatabaseIcon} 
+                                                                        icon={CircleStackIcon } 
                                                                         label="Nombre de la Base de Datos" 
                                                                         placeholder="SoftRestaurantDB"
                                                                         value={activeRestaurant.dbName}
