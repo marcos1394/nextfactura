@@ -64,6 +64,8 @@ function PaymentGateway() {
             // 1. Llamamos a nuestro backend para crear la preferencia de pago
             const response = await api.post('/payments/create-preference', {
                 planId: selectedPlan.id,
+                origin: 'webapp_onboarding' // O cualquier otro identificador que quieras
+
                 // Aquí podrías enviar más datos si tu backend los necesita
             });
 
