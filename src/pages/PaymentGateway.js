@@ -69,10 +69,11 @@ function PaymentGateway() {
                 // Aquí podrías enviar más datos si tu backend los necesita
             });
 
-            if (response.data.success && response.data.checkoutUrl) {
-                // 2. Si todo sale bien, redirigimos al usuario a la URL de checkout de Mercado Pago
-                console.log('[PaymentGateway] Redirigiendo a Mercado Pago:', response.data.checkoutUrl);
-                window.location.href = response.data.checkoutUrl;
+           // --- CORRECCIÓN CLAVE ---
+            // Ahora buscamos 'init_point' en la respuesta, que es lo que devuelve tu backend.
+            if (response.data.success && response.data.init_point) {
+                console.log('[PaymentGateway] Redirigiendo a Mercado Pago:', response.data.init_point);
+                window.location.href = response.data.init_point;
             } else {
                 throw new Error(response.data.message || 'No se pudo obtener la URL de pago.');
             }
