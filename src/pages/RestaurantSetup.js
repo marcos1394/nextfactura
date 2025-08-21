@@ -5,6 +5,7 @@ import {
     MapPinIcon,
     TagIcon,
     ReceiptPercentIcon,
+    CircleStackIcon,
     CpuChipIcon,
     PlusIcon,
     TrashIcon,
@@ -14,7 +15,6 @@ import {
     DocumentIcon,
     KeyIcon,
     ServerIcon,
-    CircleStackIcon,
     UserIcon,
     LockClosedIcon,
     GlobeAltIcon,
@@ -37,9 +37,11 @@ const RestaurantSetup = () => {
         subdomain: 'mirestaurante',
         primaryColor: '#2563eb',
         logoUrl: '',
+        logoFile: null,
         welcomeMessage: 'Bienvenido a nuestro portal de facturación',
         showWelcomeMessage: true,
         backgroundImage: '',
+        backgroundFile: null,
         customCSS: ''
     });
 
@@ -76,6 +78,22 @@ const RestaurantSetup = () => {
 
     const updatePortalConfig = (field, value) => {
         setPortalConfig(prev => ({ ...prev, [field]: value }));
+    };
+
+    // Función para manejar la carga de archivos de imagen
+    const handleImageUpload = (field, file) => {
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const imageUrl = e.target.result;
+                setPortalConfig(prev => ({
+                    ...prev,
+                    [field]: imageUrl,
+                    [`${field.replace('Url', 'File')}`]: file
+                }));
+            };
+            reader.readAsDataURL(file);
+        }
     };
 
     const addRestaurant = () => {
@@ -229,15 +247,47 @@ const RestaurantSetup = () => {
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Logo (Opcional)</label>
                                                     <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-slate-600 border-dashed rounded-lg hover:border-blue-400 transition-colors cursor-pointer">
                                                         <div className="space-y-1 text-center">
-                                                            <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
-                                                            <div className="flex text-sm text-gray-600 dark:text-slate-400">
-                                                                <label className="relative cursor-pointer bg-white dark:bg-slate-800 rounded-md font-medium text-blue-600 hover:text-blue-500">
-                                                                    <span>Subir archivo</span>
-                                                                    <input type="file" className="sr-only" accept="image/*" />
-                                                                </label>
-                                                                <p className="pl-1">o arrastra y suelta</p>
-                                                            </div>
-                                                            <p className="text-xs text-gray-500">PNG, JPG, GIF hasta 2MB</p>
+                                                            {portalConfig.logoUrl ? (
+                                                                <div className="space-y-2">
+                                                                    <img 
+                                                                        src={portalConfig.logoUrl} 
+                                                                        alt="Logo preview" 
+                                                                        className="mx-auto h-16 w-16 object-contain rounded-lg border border-gray-200"
+                                                                    />
+                                                                    <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+                                                                        {portalConfig.logoFile?.name || 'Logo cargado'}
+                                                                    </p>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setPortalConfig(prev => ({
+                                                                                ...prev,
+                                                                                logoUrl: '',
+                                                                                logoFile: null
+                                                                            }));
+                                                                        }}
+                                                                        className="text-xs text-red-500 hover:text-red-700"
+                                                                    >
+                                                                        Remover
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    <PhotoIcon className="mx-auto h-12 w-12 text-gray-400" />
+                                                                    <div className="flex text-sm text-gray-600 dark:text-slate-400">
+                                                                        <label className="relative cursor-pointer bg-white dark:bg-slate-800 rounded-md font-medium text-blue-600 hover:text-blue-500">
+                                                                            <span>Subir logo</span>
+                                                                            <input 
+                                                                                type="file" 
+                                                                                className="sr-only" 
+                                                                                accept="image/*"
+                                                                                onChange={(e) => handleImageUpload('logoUrl', e.target.files[0])}
+                                                                            />
+                                                                        </label>
+                                                                        <p className="pl-1">o arrastra y suelta</p>
+                                                                    </div>
+                                                                    <p className="text-xs text-gray-500">PNG, JPG, GIF hasta 2MB</p>
+                                                                </>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </div>
@@ -271,13 +321,46 @@ const RestaurantSetup = () => {
                                                             <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Imagen de Fondo (Opcional)</label>
                                                             <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-slate-600 border-dashed rounded-lg hover:border-blue-400 transition-colors cursor-pointer">
                                                                 <div className="space-y-1 text-center">
-                                                                    <PhotoIcon className="mx-auto h-8 w-8 text-gray-400" />
-                                                                    <div className="flex text-sm text-gray-600 dark:text-slate-400">
-                                                                        <label className="relative cursor-pointer bg-white dark:bg-slate-800 rounded-md font-medium text-blue-600 hover:text-blue-500">
-                                                                            <span>Subir imagen de fondo</span>
-                                                                            <input type="file" className="sr-only" accept="image/*" />
-                                                                        </label>
-                                                                    </div>
+                                                                    {portalConfig.backgroundImage ? (
+                                                                        <div className="space-y-2">
+                                                                            <img 
+                                                                                src={portalConfig.backgroundImage} 
+                                                                                alt="Background preview" 
+                                                                                className="mx-auto h-20 w-32 object-cover rounded-lg border border-gray-200"
+                                                                            />
+                                                                            <p className="text-sm text-green-600 dark:text-green-400 font-medium">
+                                                                                {portalConfig.backgroundFile?.name || 'Imagen cargada'}
+                                                                            </p>
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setPortalConfig(prev => ({
+                                                                                        ...prev,
+                                                                                        backgroundImage: '',
+                                                                                        backgroundFile: null
+                                                                                    }));
+                                                                                }}
+                                                                                className="text-xs text-red-500 hover:text-red-700"
+                                                                            >
+                                                                                Remover
+                                                                            </button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <>
+                                                                            <PhotoIcon className="mx-auto h-8 w-8 text-gray-400" />
+                                                                            <div className="flex text-sm text-gray-600 dark:text-slate-400">
+                                                                                <label className="relative cursor-pointer bg-white dark:bg-slate-800 rounded-md font-medium text-blue-600 hover:text-blue-500">
+                                                                                    <span>Subir imagen de fondo</span>
+                                                                                    <input 
+                                                                                        type="file" 
+                                                                                        className="sr-only" 
+                                                                                        accept="image/*"
+                                                                                        onChange={(e) => handleImageUpload('backgroundImage', e.target.files[0])}
+                                                                                    />
+                                                                                </label>
+                                                                            </div>
+                                                                            <p className="text-xs text-gray-500">Recomendado: 1920x1080px</p>
+                                                                        </>
+                                                                    )}
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -468,7 +551,7 @@ const RestaurantSetup = () => {
 
                                                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                                                     <InputField 
-                                                                        icon={CircleStackIcon } 
+                                                                        icon={CircleStackIcon} 
                                                                         label="Nombre de la Base de Datos" 
                                                                         placeholder="SoftRestaurantDB"
                                                                         value={activeRestaurant.dbName}
@@ -773,45 +856,68 @@ const PortalPreview = ({ config, restaurantName }) => {
 
             {/* Contenido del preview */}
             <div 
-                className="p-6 min-h-[400px]"
+                className="p-6 min-h-[400px] relative overflow-hidden"
                 style={{ 
-                    backgroundColor: config.primaryColor + '05',
-                    borderTop: `3px solid ${config.primaryColor}`
+                    backgroundColor: config.backgroundImage ? 'transparent' : config.primaryColor + '05',
+                    borderTop: `3px solid ${config.primaryColor}`,
+                    backgroundImage: config.backgroundImage ? `url(${config.backgroundImage})` : 'none',
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center',
+                    backgroundRepeat: 'no-repeat'
                 }}
             >
-                {/* Header del portal */}
-                <div className="text-center mb-8">
-                    <div 
-                        className="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-white font-bold text-xl mb-4"
-                        style={{ backgroundColor: config.primaryColor }}
-                    >
-                        {config.portalName.charAt(0).toUpperCase()}
+                {/* Overlay para mejor legibilidad cuando hay imagen de fondo */}
+                {config.backgroundImage && (
+                    <div className="absolute inset-0 bg-black bg-opacity-40"></div>
+                )}
+                
+                <div className="relative z-10">
+                    {/* Header del portal */}
+                    <div className="text-center mb-8">
+                        {config.logoUrl ? (
+                            <div className="w-20 h-20 mx-auto rounded-full overflow-hidden border-4 border-white shadow-lg mb-4 bg-white">
+                                <img 
+                                    src={config.logoUrl} 
+                                    alt="Logo" 
+                                    className="w-full h-full object-contain"
+                                />
+                            </div>
+                        ) : (
+                            <div 
+                                className="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-white font-bold text-xl mb-4 shadow-lg"
+                                style={{ backgroundColor: config.primaryColor }}
+                            >
+                                {config.portalName.charAt(0).toUpperCase()}
+                            </div>
+                        )}
+                        
+                        <h1 className={`text-2xl font-bold mb-2 ${config.backgroundImage ? 'text-white drop-shadow-lg' : 'text-gray-900 dark:text-white'}`}>
+                            {config.portalName}
+                        </h1>
+                        
+                        {config.showWelcomeMessage && (
+                            <p className={`text-sm max-w-md mx-auto ${config.backgroundImage ? 'text-gray-100 drop-shadow' : 'text-gray-600 dark:text-slate-300'}`}>
+                                {config.welcomeMessage}
+                            </p>
+                        )}
                     </div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                        {config.portalName}
-                    </h1>
-                    {config.showWelcomeMessage && (
-                        <p className="text-gray-600 dark:text-slate-300 text-sm max-w-md mx-auto">
-                            {config.welcomeMessage}
+
+                    {/* Botón de ejemplo */}
+                    <div className="flex justify-center mb-8">
+                        <button 
+                            className="px-6 py-3 rounded-lg text-white font-semibold shadow-lg transform hover:scale-105 transition-transform"
+                            style={{ backgroundColor: config.primaryColor }}
+                        >
+                            Generar Factura
+                        </button>
+                    </div>
+
+                    {/* Footer del preview */}
+                    <div className={`pt-4 border-t text-center ${config.backgroundImage ? 'border-white border-opacity-30' : 'border-gray-200 dark:border-slate-600'}`}>
+                        <p className={`text-xs ${config.backgroundImage ? 'text-gray-200' : 'text-gray-500 dark:text-slate-400'}`}>
+                            Powered by NextManager
                         </p>
-                    )}
-                </div>
-
-                {/* Botón de ejemplo */}
-                <div className="flex justify-center">
-                    <button 
-                        className="px-6 py-3 rounded-lg text-white font-semibold shadow-lg transform hover:scale-105 transition-transform"
-                        style={{ backgroundColor: config.primaryColor }}
-                    >
-                        Generar Factura
-                    </button>
-                </div>
-
-                {/* Footer del preview */}
-                <div className="mt-8 pt-4 border-t border-gray-200 dark:border-slate-600 text-center">
-                    <p className="text-xs text-gray-500 dark:text-slate-400">
-                        Powered by NextManager
-                    </p>
+                    </div>
                 </div>
             </div>
         </div>
