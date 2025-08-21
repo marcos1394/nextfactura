@@ -24,12 +24,24 @@ import {
     SunIcon,
     MoonIcon
 } from '@heroicons/react/24/outline';
+import { 
+    createRestaurant, 
+    updatePortalConfig, 
+    testPOSConnection 
+} from '../services/api';
+
 
 const RestaurantSetup = () => {
     // Estados principales
     const [darkMode, setDarkMode] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [activeRestaurantId, setActiveRestaurantId] = useState(1);
+    
+    // Estados para manejar el envío y la retroalimentación
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    const [submitError, setSubmitError] = useState(null);
+    const [isTestingConnection, setIsTestingConnection] = useState(false);
+    const [connectionStatus, setConnectionStatus] = useState(null);
 
     // Estado del portal
     const [portalConfig, setPortalConfig] = useState({
@@ -80,7 +92,6 @@ const RestaurantSetup = () => {
         setPortalConfig(prev => ({ ...prev, [field]: value }));
     };
 
-    // Función para manejar la carga de archivos de imagen
     const handleImageUpload = (field, file) => {
         if (file) {
             const reader = new FileReader();
@@ -97,7 +108,7 @@ const RestaurantSetup = () => {
     };
 
     const addRestaurant = () => {
-        const newId = Math.max(...restaurants.map(r => r.id)) + 1;
+        const newId = restaurants.length > 0 ? Math.max(...restaurants.map(r => r.id)) + 1 : 1;
         const newRestaurant = {
             id: newId,
             name: '',
@@ -134,25 +145,92 @@ const RestaurantSetup = () => {
         if (currentStep > 1) setCurrentStep(currentStep - 1);
     };
 
-    const handleFinalSubmit = () => {
-        // Aquí iría la lógica para enviar los datos al backend
-        console.log('Portal Config:', portalConfig);
-        console.log('Restaurants:', restaurants);
-        alert('¡Configuración guardada exitosamente!');
+    const handleTestDbConnection = async () => {
+        if (!activeRestaurantId) return;
+
+        setIsTestingConnection(true);
+        setConnectionStatus(null);
+        
+        try {
+            const result = await testPOSConnection(activeRestaurantId);
+            setConnectionStatus({ success: true, message: result.message });
+            alert('Éxito: ' + result.message);
+        } catch (error) {
+            setConnectionStatus({ success: false, message: error.message });
+            alert('Error: ' + error.message);
+        } finally {
+            setIsTestingConnection(false);
+        }
+    };
+
+    const handleFinalSubmit = async () => {
+        setIsSubmitting(true);
+        setSubmitError(null);
+
+        try {
+            const createdRestaurantPromises = restaurants.map(restaurant => {
+                const restaurantData = {
+                    name: restaurant.name,
+                    address: restaurant.address,
+                    connectionHost: restaurant.dbHost,
+                    connectionPort: restaurant.dbPort,
+                    connectionUser: restaurant.dbUser,
+                    connectionPassword: restaurant.dbPassword,
+                    connectionDbName: restaurant.dbName,
+                };
+                
+                const fiscalData = {
+                    rfc: restaurant.rfc,
+                    fiscalAddress: restaurant.fiscalAddress,
+                    csdPassword: restaurant.csdPassword,
+                };
+
+                const files = {
+                    csdCertificate: restaurant.csdCertFile,
+                    csdKey: restaurant.csdKeyFile,
+                };
+
+                return createRestaurant(restaurantData, fiscalData, files);
+            });
+
+            const creationResults = await Promise.all(createdRestaurantPromises);
+            console.log('Restaurantes creados:', creationResults);
+
+            if (creationResults.length > 0 && creationResults[0].restaurant) {
+                const firstRestaurantId = creationResults[0].restaurant.id;
+
+                const portalData = {
+                    name: portalConfig.portalName,
+                    subdomain: portalConfig.subdomain,
+                    primaryColor: portalConfig.primaryColor,
+                    welcomeMessage: portalConfig.welcomeMessage,
+                    showWelcomeMessage: portalConfig.showWelcomeMessage,
+                    customCSS: portalConfig.customCSS,
+                };
+                
+                const portalFiles = {
+                    logo: portalConfig.logoFile,
+                    backgroundImage: portalConfig.backgroundFile
+                };
+                
+                await updatePortalConfig(firstRestaurantId, portalData, portalFiles);
+                console.log('Portal configurado exitosamente.');
+            }
+
+            alert('¡Configuración guardada exitosamente!');
+            window.location.href = '/dashboard';
+
+        } catch (error) {
+            console.error('Error al guardar la configuración:', error);
+            setSubmitError(error.message || 'Ocurrió un error inesperado. Por favor, revisa los datos e inténtalo de nuevo.');
+            alert(`Error al guardar: ${error.message}`);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const validateSubdomain = (value) => {
-        // Solo letras, números y guiones
         return value.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
-    };
-
-    const generateColorPalette = (primaryColor) => {
-        // Generar paleta de colores basada en el color primario
-        return {
-            primary: primaryColor,
-            secondary: primaryColor + '20',
-            accent: primaryColor + '10'
-        };
     };
 
     return (
