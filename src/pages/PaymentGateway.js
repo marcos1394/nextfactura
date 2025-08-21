@@ -4,6 +4,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
 import { ShieldCheckIcon, SparklesIcon, ArrowRightIcon, LockClosedIcon } from '@heroicons/react/24/solid';
+import api from '../services/api'; // <-- NUEVO: Importamos nuestro cliente API
 
 // Un componente para la lista de beneficios en el panel derecho
 const BenefitListItem = ({ children }) => (
@@ -46,21 +47,39 @@ function PaymentGateway() {
         }
     };
 
-    // Manejador de pago simulado
-    const handlePayment = () => {
-        if (!selectedPlan) {
-            alert('Error: No se ha seleccionado ningún plan.');
+    // --- MANEJADOR DE PAGO REAL ---
+    const handlePayment = async () => {
+        if (!selectedPlan?.id) { // Verificamos que tengamos un plan con ID
+            toast.error('Error: No se ha seleccionado ningún plan válido.');
             navigate('/plans');
             return;
         }
+
         setIsProcessing(true);
-        console.log('[PaymentGateway] Iniciando proceso de pago para:', selectedPlan);
-        setTimeout(() => {
-            console.log('[PaymentGateway] Simulando redirección a pasarela externa...');
-            // En una app real, la redirección sería a la URL de Mercado Pago.
-            // Aquí, redirigimos a la página de éxito.
-            navigate('/payment-success');
-        }, 2000);
+
+        try {
+            console.log('[PaymentGateway] Creando preferencia de pago para el plan:', selectedPlan.id);
+            
+            // 1. Llamamos a nuestro backend para crear la preferencia de pago
+            const response = await api.post('/payments/create-preference', {
+                planId: selectedPlan.id,
+                // Aquí podrías enviar más datos si tu backend los necesita
+            });
+
+            if (response.data.success && response.data.checkoutUrl) {
+                // 2. Si todo sale bien, redirigimos al usuario a la URL de checkout de Mercado Pago
+                console.log('[PaymentGateway] Redirigiendo a Mercado Pago:', response.data.checkoutUrl);
+                window.location.href = response.data.checkoutUrl;
+            } else {
+                throw new Error(response.data.message || 'No se pudo obtener la URL de pago.');
+            }
+
+        } catch (error) {
+            const errorMessage = error.response?.data?.message || 'Error al iniciar el proceso de pago. Inténtalo de nuevo.';
+            toast.error(errorMessage);
+            console.error('[PaymentGateway] Error:', error);
+            setIsProcessing(false); // Detenemos el estado de carga si hay un error
+        }
     };
 
     if (!selectedPlan) {
