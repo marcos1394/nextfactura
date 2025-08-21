@@ -123,17 +123,19 @@ function PlanSelection() {
     const [billingCycle, setBillingCycle] = useState('annually');
     const [expandedFAQ, setExpandedFAQ] = useState(null);
 
-    const handlePlanSelect = (plan) => {
-        const selectedOption = {
-        id: plan.id, // <-- ¡LA LÍNEA CLAVE QUE FALTABA!
-        product: plan.name,
-        name: `Plan ${billingCycle === 'monthly' ? 'Mensual' : 'Anual'}`,
-        price: plan.price[billingCycle],
-        period: billingCycle,
-        features: plan.features,
-    };
-        navigate('/payment', { state: { selectedPlan: selectedOption } });
-    };
+   // src/pages/PlanSelection.js
+
+  const handlePlanSelect = (plan) => {
+      const selectedOption = {
+          id: plan.ids[billingCycle], // <-- CAMBIO CLAVE: Elige el ID correcto (monthly o annually)
+          product: plan.name,
+          name: `Plan ${billingCycle === 'monthly' ? 'Mensual' : 'Anual'}`,
+          price: plan.price[billingCycle],
+          period: billingCycle,
+          features: plan.features,
+      };
+      navigate('/payment', { state: { selectedPlan: selectedOption } });
+  };
 
     return (
         <div className={`min-h-screen ${darkMode ? 'bg-slate-900 text-white' : 'bg-gray-50 text-black'} py-16 sm:py-24 px-4 font-sans`}>
