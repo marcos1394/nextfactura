@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
 import { ShieldCheckIcon, SparklesIcon, ArrowRightIcon, LockClosedIcon } from '@heroicons/react/24/solid';
 import api from '../services/api'; // <-- NUEVO: Importamos nuestro cliente API
+import { toast } from 'react-toastify'; // <-- NUEVO: Para notificaciones
 
 // Un componente para la lista de beneficios en el panel derecho
 const BenefitListItem = ({ children }) => (
