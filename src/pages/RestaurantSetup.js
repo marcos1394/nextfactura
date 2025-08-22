@@ -28,7 +28,7 @@ import {
     createRestaurant, 
     updatePortalConfig, 
     testPOSConnection 
-} from '../services/api';
+} from '../services/api.';
 
 
 const RestaurantSetup = () => {
@@ -81,6 +81,7 @@ const RestaurantSetup = () => {
     const activeRestaurant = restaurants.find(r => r.id === activeRestaurantId);
 
     const updateRestaurant = (field, value) => {
+        console.log(`[STATE UPDATE] Campo: '${field}', Nuevo Valor: '${value}'`);
         setRestaurants(prev => prev.map(r => 
             r.id === activeRestaurantId 
                 ? { ...r, [field]: value }
