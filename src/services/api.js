@@ -12,7 +12,6 @@ api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
     if (token) {
-      // Corregido: Se añade 'Bearer ' que es el formato estándar JWT esperado por el backend.
       config.headers['Authorization'] = `Bearer ${token}`;
     }
     return config;
@@ -36,11 +35,9 @@ api.interceptors.request.use(
 export const createRestaurant = async (restaurantData, fiscalData, files) => {
   const formData = new FormData();
 
-  // Adjuntar datos JSON como texto plano
   formData.append('restaurantData', JSON.stringify(restaurantData));
   formData.append('fiscalData', JSON.stringify(fiscalData));
 
-  // Adjuntar archivos si existen
   if (files.csdCertificate) {
     formData.append('csdCertificate', files.csdCertificate);
   }
@@ -49,12 +46,10 @@ export const createRestaurant = async (restaurantData, fiscalData, files) => {
   }
 
   try {
-    const response = await api.post('/restaurant', formData, {
-      // No es necesario 'Content-Type', Axios lo maneja con FormData
-    });
+    // 👇 LA ÚNICA CORRECCIÓN ESTÁ EN ESTA LÍNEA 👇
+    const response = await api.post('/restaurant/', formData); // <-- SE AÑADIÓ LA DIAGONAL AL FINAL
     return response.data;
   } catch (error) {
-    // Lanza el error para que el componente que llama lo pueda capturar
     throw new Error(error.response?.data?.message || 'Error al crear el restaurante');
   }
 };
@@ -68,7 +63,6 @@ export const createRestaurant = async (restaurantData, fiscalData, files) => {
  */
 export const updatePortalConfig = async (restaurantId, portalData, files) => {
     const formData = new FormData();
-
     formData.append('portalData', JSON.stringify(portalData));
 
     if (files.logo) {
@@ -79,7 +73,6 @@ export const updatePortalConfig = async (restaurantId, portalData, files) => {
     }
     
     try {
-        // Asumiendo que el endpoint en el backend es PUT /api/restaurant/:id/portal
         const response = await api.put(`/restaurant/${restaurantId}/portal`, formData);
         return response.data;
     } catch (error) {
@@ -107,8 +100,8 @@ export const testPOSConnection = async (restaurantId) => {
  */
 export const getRestaurants = async () => {
     try {
-        const response = await api.get('/restaurant');
-        return response.data.restaurants; // Devuelve directamente el array
+        const response = await api.get('/restaurant/'); // Es buena práctica ser consistente con la diagonal
+        return response.data.restaurants; 
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Error al obtener los restaurantes');
     }
@@ -122,7 +115,7 @@ export const getRestaurants = async () => {
 export const getRestaurant = async (restaurantId) => {
     try {
         const response = await api.get(`/restaurant/${restaurantId}`);
-        return response.data.restaurant; // Devuelve directamente el objeto
+        return response.data.restaurant;
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Error al obtener el restaurante');
     }
@@ -144,6 +137,4 @@ export const deleteRestaurant = async (restaurantId) => {
 
 // 3. EXPORTACIÓN POR DEFECTO
 // =======================================================
-// Exportamos la instancia de axios por si necesitas hacer llamadas más genéricas
-// en otras partes de tu aplicación.
 export default api;
