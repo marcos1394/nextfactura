@@ -6,6 +6,8 @@ import {
     TagIcon,
     ReceiptPercentIcon,
     CircleStackIcon,
+    IdentificationIcon,
+    BookOpenIcon,
     CpuChipIcon,
     PlusIcon,
     TrashIcon,
