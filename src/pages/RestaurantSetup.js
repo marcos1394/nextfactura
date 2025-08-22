@@ -28,7 +28,7 @@ import {
     createRestaurant, 
     updatePortalConfig, 
     testPOSConnection 
-} from '../services/api.';
+} from '../services/api';
 
 
 const RestaurantSetup = () => {
