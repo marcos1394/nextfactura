@@ -5,7 +5,7 @@ import { useThemeContext } from '../context/ThemeContext';
 // Importamos todos los iconos necesarios
 import {
     UserCircleIcon, ShieldCheckIcon, CreditCardIcon, SparklesIcon, BuildingStorefrontIcon,
-    PencilSquareIcon, ArrowDownOnSquareStackIcon, KeyIcon, ClipboardDocumentIcon, CheckCircleIcon
+    PencilSquareIcon, DocumentArrowDownIcon, SecurityTab, ArrowDownOnSquareStackIcon, KeyIcon, ClipboardDocumentIcon, CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
 // --- SUBCOMPONENTES DE UI ---
