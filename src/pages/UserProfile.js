@@ -1,41 +1,91 @@
-// src/pages/UserProfile.js
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
-import { useNavigate } from 'react-router-dom';
-// Usaremos un set de iconos consistente y de alta calidad
+
+// Importamos todos los iconos necesarios
 import {
     UserCircleIcon, ShieldCheckIcon, CreditCardIcon, SparklesIcon, BuildingStorefrontIcon,
-    PencilSquareIcon, ArrowPathIcon, BellIcon
+    PencilSquareIcon, ArrowDownOnSquareStackIcon, KeyIcon, ClipboardDocumentIcon, CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
-// --- MOCK DATA (DATOS DE MUESTRA PARA DISEÑO) ---
-const mockUserData = {
-    profile: {
-        name: 'Carlos Mendoza',
-        email: 'carlos.mendoza@elsazon.com',
-        avatarUrl: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=300&auto=format&fit=crop',
-        memberSince: '2024-01-15',
-    },
-    billing: {
-        rfc: 'MECA850101ABC',
-        fiscalAddress: 'Av. Siempre Viva 742, Col. Centro, Springfield, CP 90210',
-        paymentMethod: 'Visa **** **** **** 4242',
-        nextBillingDate: '2025-06-15',
-    },
-    plan: {
-        name: 'Paquete Completo',
-        price: 7500,
-        period: 'Anual',
-        usagePercentage: 68,
-    },
-    restaurants: [
-        { id: 1, name: 'El Sazón Porteño (Centro)', status: 'Activo' },
-        { id: 2, name: 'El Sazón Porteño (Norte)', status: 'Activo' },
-    ],
-};
-
 // --- SUBCOMPONENTES DE UI ---
+
+const BillingTab = ({ data }) => (
+    <Card title="Datos de Facturación" actionButton={<ActionButton />}>
+        <div className="space-y-4 text-gray-600 dark:text-slate-300">
+            <div>
+                <h4 className="font-semibold text-gray-800 dark:text-slate-200">Información Fiscal</h4>
+                <p><strong>RFC:</strong> {data.rfc}</p>
+                <p><strong>Dirección Fiscal:</strong> {data.fiscalAddress}</p>
+            </div>
+            <div className="pt-4 border-t border-gray-200 dark:border-slate-700">
+                <h4 className="font-semibold text-gray-800 dark:text-slate-200">Método de Pago</h4>
+                <p><strong>Método:</strong> {data.paymentMethod}</p>
+                <p><strong>Próximo cobro:</strong> {new Date(data.nextBillingDate).toLocaleDateString()}</p>
+            </div>
+        </div>
+    </Card>
+);
+
+// --- Añade este nuevo componente ---
+
+const PlanTab = ({ data }) => (
+    <Card title="Mi Plan Actual" actionButton={<ActionButton text="Cambiar Plan"/>}>
+         <div className="space-y-4 text-gray-600 dark:text-slate-300">
+            <div>
+                <h4 className="text-2xl font-bold text-gray-800 dark:text-slate-200">{data.name}</h4>
+                <p className="text-lg">{`$${data.price} / ${data.period}`}</p>
+            </div>
+            <div className="pt-4">
+                <p className="text-sm font-medium mb-1">Uso del plan</p>
+                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                    <div className="bg-blue-600 h-2.5 rounded-full" style={{ width: `${data.usagePercentage}%` }}></div>
+                </div>
+                <p className="text-xs text-right mt-1">{data.usagePercentage}% utilizado</p>
+            </div>
+        </div>
+    </Card>
+);
+
+
+// --- Añade este nuevo componente ---
+
+const RestaurantsTab = ({ data }) => (
+    <Card title="Mis Restaurantes" actionButton={<ActionButton text="Añadir Restaurante"/>}>
+        <ul className="divide-y divide-gray-200 dark:divide-slate-700">
+            {data.map(restaurant => (
+                <li key={restaurant.id} className="py-3 flex justify-between items-center">
+                    <p className="font-medium text-gray-800 dark:text-slate-200">{restaurant.name}</p>
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                        restaurant.status === 'Activo' 
+                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' 
+                        : 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
+                    }`}>
+                        {restaurant.status}
+                    </span>
+                </li>
+            ))}
+        </ul>
+    </Card>
+);
+
+// Componente de Tarjeta Genérico
+const Card = ({ title, actionButton, children, className = '' }) => (
+    <div className={`bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-sm ${className}`}>
+        <div className="p-6 flex justify-between items-center border-b border-gray-200 dark:border-slate-700">
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h3>
+            {actionButton}
+        </div>
+        <div className="p-6">{children}</div>
+    </div>
+);
+
+// Botón de Acción genérico para las tarjetas
+const ActionButton = ({ onClick, isEditing = false, text = 'Editar' }) => (
+    <button onClick={onClick} className="flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+        <PencilSquareIcon className="w-5 h-5"/> {isEditing ? 'Ver' : text}
+    </button>
+);
 
 // Navegación de Pestañas
 const AccountTabs = ({ activeTab, setActiveTab }) => {
@@ -45,6 +95,7 @@ const AccountTabs = ({ activeTab, setActiveTab }) => {
         { id: 'billing', name: 'Facturación', icon: CreditCardIcon },
         { id: 'plan', name: 'Mi Plan', icon: SparklesIcon },
         { id: 'restaurants', name: 'Mis Restaurantes', icon: BuildingStorefrontIcon },
+        { id: 'connectors', name: 'Conectores', icon: ArrowDownOnSquareStackIcon },
     ];
     return (
         <nav className="flex flex-col space-y-1">
@@ -67,119 +118,173 @@ const AccountTabs = ({ activeTab, setActiveTab }) => {
 };
 
 // Contenido de la Pestaña de Perfil
-const ProfileTab = ({ data }) => {
-    const [isEditing, setIsEditing] = useState(false);
-    // Simulación de guardado
-    const handleSave = () => { alert('Perfil guardado (simulado)'); setIsEditing(false); };
+const ProfileTab = ({ data }) => (
+    <Card title="Información Personal">
+        <div className="space-y-2 text-gray-600 dark:text-slate-300">
+            <p><strong>Nombre:</strong> {data.name}</p>
+            <p><strong>Email:</strong> {data.email}</p>
+            <p><strong>Miembro desde:</strong> {new Date(data.memberSince).toLocaleDateString()}</p>
+        </div>
+    </Card>
+);
+
+// Contenido de la Pestaña de Conectores
+const ConnectorsTab = ({ restaurant }) => {
+    const [isCopied, setIsCopied] = useState(false);
+
+    const handleCopyToClipboard = () => {
+        if (restaurant?.agentKey) {
+            navigator.clipboard.writeText(restaurant.agentKey);
+            setIsCopied(true);
+            setTimeout(() => setIsCopied(false), 2000);
+        }
+    };
+
+    const handleDownload = async () => {
+        try {
+            const response = await fetch('/api/restaurants/connector/download', {
+                headers: {
+                    // Asegúrate de enviar el token de autenticación
+                    'Authorization': `Bearer ${localStorage.getItem('authToken')}` 
+                }
+            });
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'No tienes permiso para descargar este archivo.');
+            }
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'NextFactura-Connector.msi';
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+        } catch (error) {
+            alert(`Error: ${error.message}`);
+        }
+    };
+
     return (
-        <Card title="Información Personal" actionButton={<ActionButton onClick={() => setIsEditing(!isEditing)} isEditing={isEditing} />}>
-            {isEditing ? (
-                <div className="space-y-4">
-                    <InputField label="Nombre Completo" defaultValue={data.name} />
-                    <InputField label="Correo Electrónico" type="email" defaultValue={data.email} disabled />
-                    <p className="text-xs text-gray-500">El correo electrónico no se puede cambiar.</p>
+        <Card title="Integración con Punto de Venta">
+            <div className="space-y-6">
+                <div>
+                    <h4 className="font-semibold text-gray-800 dark:text-slate-200">Conector para Soft Restaurant®</h4>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
+                        Descarga nuestro agente para sincronizar automáticamente las ventas de tu Punto de Venta con NextFactura.
+                    </p>
                 </div>
-            ) : (
-                <div className="space-y-2 text-gray-600 dark:text-slate-300">
-                    <p><strong>Nombre:</strong> {data.name}</p>
-                    <p><strong>Email:</strong> {data.email}</p>
-                    <p><strong>Miembro desde:</strong> {new Date(data.memberSince).toLocaleDateString()}</p>
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-slate-300">Tu Clave de Agente Única</label>
+                    <div className="mt-1 flex rounded-md shadow-sm">
+                        <input 
+                            type="text" 
+                            value={restaurant?.agentKey || 'Clave no disponible...'} 
+                            readOnly 
+                            className="flex-1 block w-full rounded-none rounded-l-md p-2 bg-gray-100 dark:bg-slate-900 border-gray-300 dark:border-slate-600 font-mono text-sm" 
+                        />
+                        <button 
+                            onClick={handleCopyToClipboard}
+                            className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 dark:border-slate-600 bg-gray-50 dark:bg-slate-700 text-gray-500 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-600"
+                        >
+                            {isCopied ? <CheckCircleIcon className="w-5 h-5 text-green-500" /> : <ClipboardDocumentIcon className="w-5 h-5" />}
+                        </button>
+                    </div>
                 </div>
-            )}
-            {isEditing && <div className="mt-6 flex justify-end gap-3"><button onClick={() => setIsEditing(false)} className="px-4 py-2 text-sm font-semibold rounded-lg bg-gray-200 dark:bg-slate-600">Cancelar</button><button onClick={handleSave} className="px-4 py-2 text-sm font-semibold rounded-lg bg-blue-600 text-white">Guardar Cambios</button></div>}
+                <div className="pt-4 border-t border-gray-200 dark:border-slate-700">
+                    <button 
+                        onClick={handleDownload}
+                        className="w-full sm:w-auto px-6 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+                    >
+                        <DocumentArrowDownIcon className="w-5 h-5" /> Descargar Instalador
+                    </button>
+                </div>
+            </div>
         </Card>
     );
 };
 
-// Botón de Acción genérico para las tarjetas
-const ActionButton = ({ onClick, isEditing = false }) => (
-    <button onClick={onClick} className="flex items-center gap-2 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">
-        <PencilSquareIcon className="w-5 h-5"/> {isEditing ? 'Ver' : 'Editar'}
-    </button>
-);
-// Input genérico
-const InputField = (props) => <input {...props} className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded-md bg-white dark:bg-slate-900" />;
-
 // --- COMPONENTE PRINCIPAL ---
-/**
- * UserProfile - Reimaginado como un "Centro de Cuenta" modular y accionable.
- * * Estrategia de UX/UI:
- * 1.  Hub Centralizado con Pestañas: Se abandona la página de "perfil" estática por un hub de gestión
- * con pestañas. Esto organiza la información compleja en secciones lógicas y manejables (Perfil,
- * Seguridad, Facturación, etc.), mejorando drásticamente la navegación y la usabilidad.
- * 2.  Diseño Accionable: Cada pieza de información es editable. El patrón de "ver y editar" permite
- * a los usuarios gestionar su cuenta de forma intuitiva sin ser abrumados por formularios constantes.
- * 3.  Layout Moderno y Consistente: Se utiliza un layout de dos columnas con navegación lateral, un
- * estándar en aplicaciones SaaS modernas, que proporciona una estructura clara y escalable.
- * 4.  Simulación de Datos para Diseño: Se utiliza un objeto de datos de muestra (`mock`) para poblar
- * la UI, permitiendo un enfoque total en el diseño de una experiencia de usuario robusta y profesional.
- */
 function UserProfile() {
     const { darkMode } = useThemeContext();
     const [userData, setUserData] = useState(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('profile');
 
     useEffect(() => {
-        // Simulación de carga de datos del perfil
-        const timer = setTimeout(() => {
-            setUserData(mockUserData);
-        }, 1000);
-        return () => clearTimeout(timer);
+        const fetchAccountData = async () => {
+            setIsLoading(true);
+            try {
+                // Obtenemos el token de autenticación (ej. de localStorage)
+                const token = localStorage.getItem('authToken');
+                if (!token) throw new Error('Usuario no autenticado.');
+
+                // Hacemos la llamada al backend para obtener TODOS los datos de la cuenta
+                const response = await fetch('/api/auth/account-details', { // Endpoint de ejemplo
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error('No se pudieron cargar los datos de la cuenta.');
+                }
+                
+                const data = await response.json();
+                setUserData(data.data); // Asumiendo que la API devuelve { success: true, data: { ... } }
+                setError(null);
+            } catch (err) {
+                setError(err.message);
+                console.error("Error fetching account data:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchAccountData();
     }, []);
 
-    if (!userData) {
-        return <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex justify-center items-center"><p className="text-gray-500">Cargando perfil...</p></div>;
+    // --- Renderizado Condicional ---
+    if (isLoading) {
+        return <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex justify-center items-center"><p className="text-gray-500">Cargando tu cuenta...</p></div>;
+    }
+    if (error) {
+        return <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex justify-center items-center"><p className="text-red-500">Error: {error}</p></div>;
     }
 
     return (
         <main className={`min-h-screen w-full p-4 sm:p-6 lg:p-8 font-sans ${darkMode ? 'bg-slate-900 text-white' : 'bg-gray-50 text-black'}`}>
             <div className="max-w-7xl mx-auto">
                 <div className="flex items-start gap-4 mb-8">
-                    <img src={userData.profile.avatarUrl} alt="Avatar" className="w-16 h-16 rounded-full"/>
+                    <img src={userData.profile.avatarUrl || `https://ui-avatars.com/api/?name=${userData.profile.name}`} alt="Avatar" className="w-16 h-16 rounded-full"/>
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Mi Cuenta</h1>
                         <p className="mt-1 text-gray-600 dark:text-slate-400">Gestiona tu perfil, facturación y configuraciones de seguridad.</p>
                     </div>
                 </div>
 
-                {/* Layout del Hub de Cuenta */}
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    {/* Navegación Lateral de Pestañas */}
                     <aside className="lg:col-span-3">
                         <AccountTabs activeTab={activeTab} setActiveTab={setActiveTab} />
                     </aside>
 
-                    {/* Contenido de la Pestaña Activa */}
                     <div className="lg:col-span-9">
                         <AnimatePresence mode="wait">
-                            <motion.div
-                                key={activeTab}
-                                initial={{ opacity: 0, y: 10 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -10 }}
-                                transition={{ duration: 0.2 }}
-                            >
-                                {activeTab === 'profile' && <ProfileTab data={userData.profile} />}
-                                {activeTab === 'security' && (
-                                    <Card title="Seguridad de la Cuenta">
-                                        <div className="divide-y divide-gray-200 dark:divide-slate-700">
-                                            <div className="py-4">
-                                                <h4 className="font-semibold">Contraseña</h4>
-                                                <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Se recomienda cambiar la contraseña periódicamente.</p>
-                                                <button className="mt-2 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">Cambiar Contraseña</button>
-                                            </div>
-                                            <div className="py-4">
-                                                <h4 className="font-semibold">Autenticación de Dos Factores (2FA)</h4>
-                                                <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Añade una capa extra de seguridad a tu cuenta.</p>
-                                                <button className="mt-2 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">Gestionar 2FA</button>
-                                            </div>
-                                        </div>
-                                    </Card>
-                                )}
-                                {activeTab === 'billing' && <Card title="Facturación e Historial" actionButton={<ActionButton />}>...</Card>}
-                                {activeTab === 'plan' && <Card title="Mi Plan Actual" actionButton={<ActionButton />}>...</Card>}
-                                {activeTab === 'restaurants' && <Card title="Mis Restaurantes" actionButton={<ActionButton />}>...</Card>}
-                            </motion.div>
+                           <motion.div
+    key={activeTab}
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0, y: -10 }}
+    transition={{ duration: 0.2 }}
+>
+    {activeTab === 'profile' && <ProfileTab data={userData.profile} />}
+    {activeTab === 'security' && <SecurityTab />}
+    {activeTab === 'billing' && <BillingTab data={userData.billing} />}
+    {activeTab === 'plan' && <PlanTab data={userData.plan} />}
+    {activeTab === 'restaurants' && <RestaurantsTab data={userData.restaurants} />}
+    {activeTab === 'connectors' && <ConnectorsTab restaurant={userData.restaurants[0]} />}
+</motion.div>
                         </AnimatePresence>
                     </div>
                 </div>
@@ -187,16 +292,5 @@ function UserProfile() {
         </main>
     );
 }
-
-// Componente de Tarjeta Genérico
-const Card = ({ title, actionButton, children }) => (
-    <div className="bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-sm">
-        <div className="p-6 flex justify-between items-center border-b border-gray-200 dark:border-slate-700">
-            <h3 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h3>
-            {actionButton}
-        </div>
-        <div className="p-6">{children}</div>
-    </div>
-);
 
 export default UserProfile;
