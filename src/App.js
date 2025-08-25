@@ -37,6 +37,7 @@ import PaymentPending from './pages/PaymentPending';
 import TicketSearch from './pages/TicketPage';
 import UnauthorizedPage from './pages/UnauthorizedPage';
 import NotFoundPage from './pages/NotFoundPage';
+import UserProfile from './pages/UserProfile'; // <-- AÑADE ESTA LÍNEA
 
 // --- Imports de Notificaciones ---
 import { ToastContainer } from 'react-toastify';
@@ -83,6 +84,7 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route index element={<AuthRedirector />} />
               <Route path="dashboard" element={<DashboardPage />} />
+              <Route path="my-account" element={<UserProfile />} />
               <Route path="plans" element={<PlanSelection />} />
               <Route path="restaurantconfig" element={<RestaurantSetup />} />
               <Route path="enable-2fa" element={<EnableTwoFactorPage />} />
