@@ -5,7 +5,7 @@ import { useThemeContext } from '../context/ThemeContext';
 // Importamos todos los iconos necesarios
 import {
     UserCircleIcon, ShieldCheckIcon, CreditCardIcon, SparklesIcon, BuildingStorefrontIcon,
-    PencilSquareIcon, DocumentArrowDownIcon, SecurityTab, ArrowDownOnSquareStackIcon, KeyIcon, ClipboardDocumentIcon, CheckCircleIcon
+    PencilSquareIcon, DocumentArrowDownIcon,  ArrowDownOnSquareStackIcon, KeyIcon, ClipboardDocumentIcon, CheckCircleIcon
 } from '@heroicons/react/24/outline';
 
 // --- SUBCOMPONENTES DE UI ---
@@ -124,6 +124,30 @@ const ProfileTab = ({ data }) => (
             <p><strong>Nombre:</strong> {data.name}</p>
             <p><strong>Email:</strong> {data.email}</p>
             <p><strong>Miembro desde:</strong> {new Date(data.memberSince).toLocaleDateString()}</p>
+        </div>
+    </Card>
+);
+
+const SecurityTab = () => (
+    <Card title="Seguridad de la Cuenta">
+        <div className="divide-y divide-gray-200 dark:divide-slate-700">
+            {/* Sección para Cambiar Contraseña */}
+            <div className="py-4">
+                <h4 className="font-semibold text-gray-800 dark:text-slate-200">Contraseña</h4>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Se recomienda cambiar la contraseña periódicamente para mantener tu cuenta segura.</p>
+                <button className="mt-2 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                    Cambiar Contraseña
+                </button>
+            </div>
+
+            {/* Sección para Autenticación de Dos Factores */}
+            <div className="py-4">
+                <h4 className="font-semibold text-gray-800 dark:text-slate-200">Autenticación de Dos Factores (2FA)</h4>
+                <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Añade una capa extra de seguridad a tu cuenta al iniciar sesión.</p>
+                <button className="mt-2 text-sm font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+                    Gestionar 2FA
+                </button>
+            </div>
         </div>
     </Card>
 );
