@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
+import { useAuth } from '../hooks/useAuth';
 
 // Importamos todos los iconos necesarios
 import {
