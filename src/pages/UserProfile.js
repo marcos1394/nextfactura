@@ -167,29 +167,40 @@ const ConnectorsTab = ({ restaurant }) => {
     };
 
     const handleDownload = async () => {
-        try {
-            const response = await fetch('/api/restaurants/connector/download', {
-                headers: {
-                    // Asegúrate de enviar el token de autenticación
-                    'Authorization': `Bearer ${localStorage.getItem('authToken')}` 
-                }
-            });
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.message || 'No tienes permiso para descargar este archivo.');
-            }
-            const blob = await response.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'NextFactura-Connector.msi';
-            document.body.appendChild(a);
-            a.click();
-            a.remove();
-        } catch (error) {
-            alert(`Error: ${error.message}`);
+    try {
+        const token = localStorage.getItem('authToken'); // Obtenemos el token
+        
+        // Verificación extra por si el token no existiera
+        if (!token) {
+            throw new Error('No estás autenticado.');
         }
-    };
+
+        const response = await fetch('/api/restaurants/connector/download', {
+            headers: {
+                // --- CORRECCIÓN CLAVE ---
+                // Simplemente pasamos el token, que ya incluye "Bearer "
+                'Authorization': token 
+            }
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'No tienes permiso para descargar este archivo.');
+        }
+
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'NextFactura-Connector.msi';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+    } catch (error) {
+        alert(`Error: ${error.message}`);
+    }
+};
 
     return (
         <Card title="Integración con Punto de Venta">
