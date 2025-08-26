@@ -1,87 +1,84 @@
-// src/context/AuthContext.js
-
 import React, { createContext, useState, useEffect, useCallback } from 'react';
-import api from '../services/api';
+// Importamos las funciones de nuestro servicio de API
+import { loginUser, getAccountDetails, logoutUser } from '../services/api';
 
 // --- EXPORTAMOS EL CONTEXTO ---
 export const AuthContext = createContext(null);
 
 // --- EXPORTAMOS EL PROVEEDOR ---
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [status, setStatus] = useState(null); // <-- AÑADIDO: para guardar el estado del usuario
-  const [isLoading, setIsLoading] = useState(true);
+    // Un solo estado para guardar toda la información del usuario (perfil, plan, restaurantes, etc.)
+    const [user, setUser] = useState(null);
+    // Estado para saber si estamos verificando la sesión inicial
+    const [isLoading, setIsLoading] = useState(true);
 
-  // Esta función se encarga de validar una sesión existente al recargar la página
-  const verifyAuth = useCallback(async () => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      setIsLoading(false);
-      return;
-    }
-    try {
-      // Para una sesión existente, hacemos dos llamadas para obtener toda la información
-      const userResponse = await api.get('/auth/me'); 
-      // NOTA: Lo ideal es que tu backend tuviera un endpoint como '/users/status'
-      // o que el endpoint '/auth/me' también devolviera el estado del plan/restaurante.
-      // Por ahora, el status solo se cargará al hacer login.
-      if (userResponse.data.success) {
-        setUser(userResponse.data.user);
-      } else {
-        // Limpiamos si la respuesta del backend no es exitosa
-        localStorage.removeItem('token');
+    // Esta función valida una sesión existente al cargar o recargar la página.
+    const verifySession = useCallback(async () => {
+        const token = localStorage.getItem('authToken'); // Usamos 'authToken' consistentemente
+        if (!token) {
+            setIsLoading(false);
+            return;
+        }
+        
+        try {
+            // Hacemos UNA SOLA llamada al endpoint que nos da toda la información.
+            const response = await getAccountDetails();
+            if (response.success) {
+                setUser(response.data); // Guardamos el objeto completo { profile, plan, restaurants, billing }
+            } else {
+                throw new Error("La sesión no es válida.");
+            }
+        } catch (error) {
+            console.error("Fallo la verificación de la sesión:", error.message);
+            // Si el token es inválido o la API falla, limpiamos todo.
+            localStorage.removeItem('authToken');
+            setUser(null);
+        } finally {
+            setIsLoading(false);
+        }
+    }, []);
+
+    // Al cargar la aplicación por primera vez, intentamos verificar la sesión.
+    useEffect(() => {
+        verifySession();
+    }, [verifySession]);
+
+    // Función de login, ahora centraliza toda la lógica.
+    const login = async (email, password) => {
+        try {
+            const data = await loginUser(email, password);
+            
+            if (data.token) {
+                // 1. Guardamos el token en localStorage.
+                localStorage.setItem('authToken', data.token);
+                
+                // 2. Inmediatamente después de guardar el token, recargamos
+                //    toda la información de la cuenta para que el estado sea consistente.
+                await verifySession();
+            }
+            return data; // Devolvemos la data por si el componente la necesita (ej. para 2FA)
+        } catch (error) {
+            // Si el login falla, nos aseguramos de que todo esté limpio.
+            localStorage.removeItem('authToken');
+            setUser(null);
+            throw error; // Lanzamos el error para que LoginPage pueda mostrar un mensaje.
+        }
+    };
+
+    const logout = () => {
+        localStorage.removeItem('authToken');
         setUser(null);
-        setStatus(null);
-      }
-    } catch (error) {
-      console.error("Fallo la verificación de la sesión:", error.message);
-      // Limpiamos si el token es inválido o la petición falla
-      localStorage.removeItem('token');
-      setUser(null);
-      setStatus(null);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+        logoutUser(); // Notificamos al backend (sin esperar respuesta)
+    };
 
-  useEffect(() => {
-    verifyAuth();
-  }, [verifyAuth]);
+    // El valor que será accesible por toda la aplicación.
+    const value = {
+        user,
+        isAuthenticated: !!user, // true si hay un objeto de usuario, false si es null
+        isLoading,
+        login,
+        logout,
+    };
 
-  // Función de login que ahora recibe y guarda el 'status'
-  const login = async (email, password) => {
-    // La llamada al backend ahora devuelve token, user y status
-    const response = await api.post('/auth/login', { email, password });
-    
-    const { token, user, status } = response.data;
-    
-    // Guardamos toda la información en el estado y localStorage
-    localStorage.setItem('token', token);
-    setUser(user);
-    setStatus(status); // <-- AÑADIDO: guardamos el status
-  };
-
-  const logout = async () => {
-    try {
-      await api.post('/auth/logout');
-    } catch (error) {
-      console.error("Error al hacer logout en el backend:", error.message);
-    } finally {
-      localStorage.removeItem('token');
-      setUser(null);
-      setStatus(null); // <-- AÑADIDO: limpiamos el status al salir
-    }
-  };
-
-  // El valor que será accesible por toda la aplicación
-  const value = {
-    user,
-    status, // <-- AÑADIDO: exponemos el status para que AuthRedirector lo use
-    isAuthenticated: !!user,
-    isLoading,
-    login,
-    logout,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+    return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

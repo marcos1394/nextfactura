@@ -155,6 +155,7 @@ const SecurityTab = () => (
 // Contenido de la Pestaña de Conectores
 const ConnectorsTab = ({ restaurant }) => {
     const [isCopied, setIsCopied] = useState(false);
+    
 
     const handleCopyToClipboard = () => {
         if (restaurant?.agentKey) {
@@ -228,60 +229,38 @@ const ConnectorsTab = ({ restaurant }) => {
     );
 };
 
-// --- COMPONENTE PRINCIPAL ---
 function UserProfile() {
     const { darkMode } = useThemeContext();
-    const [userData, setUserData] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
-    const [error, setError] = useState(null);
+    // Obtenemos los datos y el estado de carga directamente de nuestro hook de autenticación
+    const { user, isLoading } = useAuth(); 
     const [activeTab, setActiveTab] = useState('profile');
 
-    useEffect(() => {
-        const fetchAccountData = async () => {
-            setIsLoading(true);
-            try {
-                // Obtenemos el token de autenticación (ej. de localStorage)
-                const token = localStorage.getItem('authToken');
-                if (!token) throw new Error('Usuario no autenticado.');
-
-                // Hacemos la llamada al backend para obtener TODOS los datos de la cuenta
-                const response = await fetch('/api/auth/account-details', { // Endpoint de ejemplo
-                    headers: {
-                        'Authorization': `Bearer ${token}`
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error('No se pudieron cargar los datos de la cuenta.');
-                }
-                
-                const data = await response.json();
-                setUserData(data.data); // Asumiendo que la API devuelve { success: true, data: { ... } }
-                setError(null);
-            } catch (err) {
-                setError(err.message);
-                console.error("Error fetching account data:", err);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        fetchAccountData();
-    }, []);
+    // El useEffect para buscar datos ya no es necesario aquí. ¡Más limpio!
 
     // --- Renderizado Condicional ---
     if (isLoading) {
-        return <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex justify-center items-center"><p className="text-gray-500">Cargando tu cuenta...</p></div>;
-    }
-    if (error) {
-        return <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex justify-center items-center"><p className="text-red-500">Error: {error}</p></div>;
+        return (
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex justify-center items-center">
+                <p className="text-gray-500">Cargando tu cuenta...</p>
+            </div>
+        );
     }
 
+    if (!user) {
+        return (
+            <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex justify-center items-center">
+                <p className="text-red-500">Error: No se pudo cargar la información. Por favor, intenta iniciar sesión de nuevo.</p>
+            </div>
+        );
+    }
+    
+    // Si llegamos aquí, 'user' contiene el objeto completo: { profile, billing, plan, restaurants }
     return (
         <main className={`min-h-screen w-full p-4 sm:p-6 lg:p-8 font-sans ${darkMode ? 'bg-slate-900 text-white' : 'bg-gray-50 text-black'}`}>
             <div className="max-w-7xl mx-auto">
                 <div className="flex items-start gap-4 mb-8">
-                    <img src={userData.profile.avatarUrl || `https://ui-avatars.com/api/?name=${userData.profile.name}`} alt="Avatar" className="w-16 h-16 rounded-full"/>
+                    {/* CORREGIDO: Usamos user.profile... */}
+                    <img src={user.profile.avatarUrl || `https://ui-avatars.com/api/?name=${user.profile.name}`} alt="Avatar" className="w-16 h-16 rounded-full"/>
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Mi Cuenta</h1>
                         <p className="mt-1 text-gray-600 dark:text-slate-400">Gestiona tu perfil, facturación y configuraciones de seguridad.</p>
@@ -295,20 +274,21 @@ function UserProfile() {
 
                     <div className="lg:col-span-9">
                         <AnimatePresence mode="wait">
-                           <motion.div
-    key={activeTab}
-    initial={{ opacity: 0, y: 10 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -10 }}
-    transition={{ duration: 0.2 }}
->
-    {activeTab === 'profile' && <ProfileTab data={userData.profile} />}
-    {activeTab === 'security' && <SecurityTab />}
-    {activeTab === 'billing' && <BillingTab data={userData.billing} />}
-    {activeTab === 'plan' && <PlanTab data={userData.plan} />}
-    {activeTab === 'restaurants' && <RestaurantsTab data={userData.restaurants} />}
-    {activeTab === 'connectors' && <ConnectorsTab restaurant={userData.restaurants[0]} />}
-</motion.div>
+                            <motion.div
+                                key={activeTab}
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -10 }}
+                                transition={{ duration: 0.2 }}
+                            >
+                                {/* CORREGIDO: Todas las props ahora usan la variable 'user' del contexto */}
+                                {activeTab === 'profile' && <ProfileTab data={user.profile} />}
+                                {activeTab === 'security' && <SecurityTab />}
+                                {activeTab === 'billing' && <BillingTab data={user.billing} />}
+                                {activeTab === 'plan' && <PlanTab data={user.plan} />}
+                                {activeTab === 'restaurants' && <RestaurantsTab data={user.restaurants} />}
+                                {activeTab === 'connectors' && <ConnectorsTab restaurant={user.restaurants[0]} />}
+                            </motion.div>
                         </AnimatePresence>
                     </div>
                 </div>
@@ -316,5 +296,4 @@ function UserProfile() {
         </main>
     );
 }
-
 export default UserProfile;

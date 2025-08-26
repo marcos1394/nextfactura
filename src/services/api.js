@@ -10,7 +10,9 @@ const api = axios.create({
 // Interceptor para añadir automáticamente el token de autenticación a cada petición.
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    // --- CORRECCIÓN CLAVE AQUÍ ---
+    // Cambiamos 'token' por 'authToken' para que sea consistente con AuthContext y UserProfile.
+    const token = localStorage.getItem('authToken'); 
     if (token) {
       config.headers['Authorization'] = `${token}`;
     }
@@ -25,113 +27,104 @@ api.interceptors.request.use(
 // 2. FUNCIONES DE LA API PARA RESTAURANTES Y PORTAL
 // =======================================================
 
-/**
- * Crea un nuevo restaurante junto con sus datos fiscales y archivos.
- * @param {object} restaurantData - Datos generales del restaurante.
- * @param {object} fiscalData - Datos fiscales del restaurante.
- * @param {object} files - Objeto con los archivos { csdCertificate, csdKey }.
- * @returns {Promise<object>} - El restaurante creado.
- */
 export const createRestaurant = async (restaurantData, fiscalData, files) => {
   const formData = new FormData();
-
   formData.append('restaurantData', JSON.stringify(restaurantData));
   formData.append('fiscalData', JSON.stringify(fiscalData));
-
   if (files.csdCertificate) {
     formData.append('csdCertificate', files.csdCertificate);
   }
   if (files.csdKey) {
     formData.append('csdKey', files.csdKey);
   }
-
   try {
-    // 👇 LA ÚNICA CORRECCIÓN ESTÁ EN ESTA LÍNEA 👇
-    const response = await api.post('/restaurant/', formData); // <-- SE AÑADIÓ LA DIAGONAL AL FINAL
+    const response = await api.post('/restaurants/', formData); // Ruta corregida para consistencia
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Error al crear el restaurante');
   }
 };
 
-/**
- * Actualiza la configuración del portal de un restaurante, incluyendo el logo y fondo.
- * @param {string} restaurantId - ID del restaurante al que se asocia el portal.
- * @param {object} portalData - Datos de configuración del portal.
- * @param {object} files - Objeto con los archivos { logo, backgroundImage }.
- * @returns {Promise<object>} - La configuración del portal actualizada.
- */
 export const updatePortalConfig = async (restaurantId, portalData, files) => {
     const formData = new FormData();
     formData.append('portalData', JSON.stringify(portalData));
-
     if (files.logo) {
         formData.append('logo', files.logo);
     }
     if (files.backgroundImage) {
         formData.append('backgroundImage', files.backgroundImage);
     }
-    
     try {
-        const response = await api.put(`/restaurant/${restaurantId}/portal`, formData);
+        const response = await api.put(`/restaurants/${restaurantId}/portal`, formData);
         return response.data;
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Error al actualizar el portal');
     }
 };
 
-/**
- * Prueba la conexión a la base de datos de SoftRestaurant.
- * @param {string} restaurantId - ID del restaurante a probar.
- * @returns {Promise<object>} - El resultado de la prueba de conexión.
- */
 export const testPOSConnection = async (restaurantId) => {
     try {
-        const response = await api.post(`/restaurant/${restaurantId}/test-connection`);
+        const response = await api.post(`/restaurants/${restaurantId}/test-connection`);
         return response.data;
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Fallo en la prueba de conexión');
     }
 };
 
-/**
- * Obtiene la lista de todos los restaurantes del usuario autenticado.
- * @returns {Promise<Array>} - Un array de objetos de restaurante.
- */
 export const getRestaurants = async () => {
     try {
-        const response = await api.get('/restaurant/'); // Es buena práctica ser consistente con la diagonal
+        const response = await api.get('/restaurants/');
         return response.data.restaurants; 
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Error al obtener los restaurantes');
     }
 };
 
-/**
- * Obtiene un restaurante específico por su ID.
- * @param {string} restaurantId - El ID del restaurante a obtener.
- * @returns {Promise<object>} - El objeto del restaurante.
- */
 export const getRestaurant = async (restaurantId) => {
     try {
-        const response = await api.get(`/restaurant/${restaurantId}`);
+        const response = await api.get(`/restaurants/${restaurantId}`);
         return response.data.restaurant;
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Error al obtener el restaurante');
     }
 };
 
-/**
- * Elimina (desactiva) un restaurante por su ID.
- * @param {string} restaurantId - El ID del restaurante a eliminar.
- * @returns {Promise<object>} - Mensaje de confirmación.
- */
 export const deleteRestaurant = async (restaurantId) => {
     try {
-        const response = await api.delete(`/restaurant/${restaurantId}`);
+        const response = await api.delete(`/restaurants/${restaurantId}`);
         return response.data;
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Error al eliminar el restaurante');
+    }
+};
+
+
+// --- NUEVO: FUNCIONES DE LA API PARA AUTENTICACIÓN ---
+// =======================================================
+
+export const loginUser = async (email, password) => {
+    try {
+        const response = await api.post('/auth/login', { email, password });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || new Error('Error de conexión o credenciales inválidas.');
+    }
+};
+
+export const getAccountDetails = async () => {
+    try {
+        const response = await api.get('/auth/account-details');
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || new Error('No se pudieron cargar los datos de la cuenta.');
+    }
+};
+
+export const logoutUser = async () => {
+    try {
+        await api.post('/auth/logout');
+    } catch (error) {
+        console.error("Error notificando al backend sobre el logout:", error);
     }
 };
 
