@@ -31,14 +31,18 @@ const StatCard = ({ item }) => {
     );
 };
 
-const MainChart = React.forwardRef(({ data, options }, ref) => (
+const MainChart = React.forwardRef(({ data, options }, ref) => {
+  const { darkMode } = useThemeContext(); // <-- AÑADE ESTA LÍNEA
+  
+  return (
     <Card className={darkMode ? 'bg-gray-800' : 'bg-white'}>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Ventas de la Última Semana</h3>
         <div className="mt-4 h-72">
             <Line data={data} options={options} ref={ref} />
         </div>
     </Card>
-));
+  );
+});
 
 // --- NUEVO COMPONENTE PARA MOSTRAR DATOS DE PRODUCTOS ---
 const ProductCountCard = ({ products }) => {
