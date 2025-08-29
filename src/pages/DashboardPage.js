@@ -1,622 +1,490 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Line, Doughnut, Bar } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, Filler, ArcElement } from 'chart.js';
-import { 
-    BanknotesIcon, 
-    DocumentTextIcon, 
-    CreditCardIcon, 
-    ShoppingCartIcon,
-    UserGroupIcon,
-    ClockIcon,
-    ChartBarIcon,
-    CubeIcon,
-    EyeIcon,
-    DocumentArrowDownIcon,
-    CalendarDaysIcon,
-    ArrowTrendingUpIcon,
-    ArrowTrendingDownIcon
-} from '@heroicons/react/24/outline';
-import 'react-circular-progressbar/dist/styles.css';
+import { ArrowTrendingUpIcon, BanknotesIcon, DocumentTextIcon, Cog6ToothIcon, EyeIcon, DocumentArrowDownIcon, CubeIcon, ClockIcon, UserGroupIcon, CreditCardIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
+import 'react-circular-progressbar/dist/styles.css';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, Filler, ArcElement);
 
-// Mock data para simular el contexto y autenticación
-const mockUser = {
-    restaurants: [{ id: 1, name: "Gallozon Restaurant" }]
-};
+// Simulación de contexto de tema y autenticación
+const useThemeContext = () => ({ darkMode: true });
+const useAuth = () => ({ 
+  user: { 
+    restaurants: [{ id: 1, name: "Gallozon Central" }] 
+  } 
+});
 
-const mockTheme = { darkMode: false };
-
-// Datos simulados
+// Mock data basado en el formato real
 const mockChequesData = [
-    {
-        "totalbebidas": 0,
-        "totalalimentos": 212.931,
-        "totalsindescuento": 212.931,
-        "efectivo": 247,
-        "tarjeta": 0,
-        "total": 247,
-        "totalarticulos": 4,
-        "estacion": "DESKTOP-TSFOE7T",
-        "idturno": 1,
-        "tipodeservicio": 1,
-        "orden": 4,
-        "cambio": 53,
-        "impreso": true,
-        "pagado": true,
-        "mesa": "03",
-        "nopersonas": 1,
-        "cierre": "2025-08-27T18:13:25.000Z",
-        "fecha": "2025-08-27T18:13:12.000Z",
-        "numcheque": 4,
-        "folio": "3"
-    },
-    {
-        "totalbebidas": 0,
-        "totalalimentos": 423.2759,
-        "totalsindescuento": 423.2759,
-        "efectivo": 0,
-        "tarjeta": 0,
-        "total": 491,
-        "totalarticulos": 3,
-        "estacion": "DESKTOP-TSFOE7T",
-        "idturno": 1,
-        "tipodeservicio": 1,
-        "orden": 3,
-        "cambio": 0,
-        "impreso": true,
-        "pagado": true,
-        "mesa": "01",
-        "nopersonas": 1,
-        "cierre": "2025-08-27T18:12:57.000Z",
-        "fecha": "2025-08-27T18:12:49.000Z",
-        "numcheque": 3,
-        "folio": "2"
-    },
-    {
-        "totalbebidas": 0,
-        "totalalimentos": 222.4138,
-        "totalsindescuento": 222.4138,
-        "efectivo": 258,
-        "tarjeta": 0,
-        "total": 258,
-        "totalarticulos": 2,
-        "estacion": "DESKTOP-TSFOE7T",
-        "idturno": 1,
-        "tipodeservicio": 3,
-        "orden": 2,
-        "cambio": 42,
-        "impreso": true,
-        "pagado": true,
-        "mesa": "",
-        "nopersonas": 1,
-        "cierre": "2025-08-27T18:07:33.000Z",
-        "fecha": "2025-08-27T18:07:33.000Z",
-        "numcheque": 2,
-        "folio": "1"
-    },
-    {
-        "totalbebidas": 0,
-        "totalalimentos": 465.5172,
-        "totalsindescuento": 465.5172,
-        "efectivo": 0,
-        "tarjeta": 540,
-        "total": 540,
-        "totalarticulos": 2,
-        "estacion": "DESKTOP-TSFOE7T",
-        "idturno": 1,
-        "tipodeservicio": 3,
-        "orden": 1,
-        "cambio": 0,
-        "impreso": true,
-        "pagado": true,
-        "mesa": "",
-        "nopersonas": 1,
-        "cierre": "2025-08-27T18:07:21.000Z",
-        "fecha": "2025-08-27T18:07:21.000Z",
-        "numcheque": 1,
-        "folio": "0"
-    }
+  {
+    totalbebidas: 0,
+    totalalimentos: 212.931,
+    totalsindescuento: 212.931,
+    efectivo: 247,
+    tarjeta: 0,
+    total: 247,
+    totalarticulos: 4,
+    estacion: "DESKTOP-TSFOE7T",
+    idturno: 1,
+    tipodeservicio: 1,
+    orden: 4,
+    cambio: 53,
+    impreso: true,
+    pagado: true,
+    mesa: "03",
+    nopersonas: 1,
+    cierre: "2025-08-27T18:13:25.000Z",
+    fecha: "2025-08-27T18:13:12.000Z",
+    numcheque: 4,
+    folio: "3"
+  },
+  {
+    totalbebidas: 45,
+    totalalimentos: 423.2759,
+    totalsindescuento: 423.2759,
+    efectivo: 0,
+    tarjeta: 491,
+    total: 491,
+    totalarticulos: 3,
+    estacion: "DESKTOP-TSFOE7T",
+    idturno: 1,
+    tipodeservicio: 1,
+    orden: 3,
+    cambio: 0,
+    impreso: true,
+    pagado: true,
+    mesa: "01",
+    nopersonas: 2,
+    cierre: "2025-08-27T18:12:57.000Z",
+    fecha: "2025-08-27T18:12:49.000Z",
+    numcheque: 3,
+    folio: "2"
+  },
+  {
+    totalbebidas: 30,
+    totalalimentos: 222.4138,
+    totalsindescuento: 222.4138,
+    efectivo: 258,
+    tarjeta: 0,
+    total: 258,
+    totalarticulos: 2,
+    estacion: "DESKTOP-TSFOE7T",
+    idturno: 1,
+    tipodeservicio: 3,
+    orden: 2,
+    cambio: 42,
+    impreso: true,
+    pagado: true,
+    mesa: "",
+    nopersonas: 1,
+    cierre: "2025-08-27T18:07:33.000Z",
+    fecha: "2025-08-27T18:07:33.000Z",
+    numcheque: 2,
+    folio: "1"
+  }
 ];
 
 const mockProductsData = [
-    { idproducto: "0110002", descripcion: "1 POLLO Y MEDIO", nombrecorto: "", plu: "" },
-    { idproducto: "09003", descripcion: "1/4 DE POLLO", nombrecorto: "", plu: "" },
-    { idproducto: "10005", descripcion: "1/4 DE POLLO", nombrecorto: "", plu: "" },
-    { idproducto: "01004", descripcion: "1/4 POLLO", nombrecorto: "", plu: "" },
-    { idproducto: "03002", descripcion: "10 GALLITOS", nombrecorto: "", plu: "" }
+  { idproducto: "0110002", descripcion: "1 POLLO Y MEDIO", nombrecorto: "", plu: "" },
+  { idproducto: "09003", descripcion: "1/4 DE POLLO", nombrecorto: "", plu: "" },
+  { idproducto: "03001", descripcion: "6 GALLITOS", nombrecorto: "", plu: "" },
+  { idproducto: "08004", descripcion: "AGUA 500ML", nombrecorto: "", plu: "" },
 ];
 
-// Componentes UI
+// --- COMPONENTES DE UI ---
 const Card = ({ children, className = '' }) => (
-    <div className={`rounded-2xl p-6 shadow-lg border transition-all duration-300 hover:shadow-xl ${className}`}>
-        {children}
-    </div>
+  <div className={`rounded-2xl p-6 shadow-lg transition-all duration-300 border border-gray-700/50 backdrop-blur-sm ${className}`}>
+    {children}
+  </div>
 );
 
-const StatCard = ({ title, value, subtitle, icon: Icon, trend, trendValue, color = 'blue' }) => {
-    const { darkMode } = mockTheme;
-    const colorClasses = {
-        blue: 'from-blue-500 to-blue-600',
-        green: 'from-green-500 to-green-600',
-        purple: 'from-purple-500 to-purple-600',
-        orange: 'from-orange-500 to-orange-600',
-        red: 'from-red-500 to-red-600',
-        indigo: 'from-indigo-500 to-indigo-600'
-    };
-
-    return (
-        <Card className={`bg-gradient-to-br ${colorClasses[color]} text-white border-0 relative overflow-hidden`}>
-            <div className="absolute top-0 right-0 -mt-4 -mr-4 w-20 h-20 rounded-full bg-white bg-opacity-10"></div>
-            <div className="relative">
-                <div className="flex items-center justify-between mb-4">
-                    <Icon className="w-8 h-8 text-white opacity-80" />
-                    {trend && (
-                        <div className={`flex items-center text-sm ${trend === 'up' ? 'text-green-200' : 'text-red-200'}`}>
-                            {trend === 'up' ? <ArrowTrendingUpIcon className="w-4 h-4 mr-1" /> : <ArrowTrendingDownIcon className="w-4 h-4 mr-1" />}
-                            {trendValue}
-                        </div>
-                    )}
-                </div>
-                <p className="text-3xl font-bold mb-1">{value}</p>
-                <p className="text-sm opacity-90">{title}</p>
-                {subtitle && <p className="text-xs opacity-70 mt-1">{subtitle}</p>}
-            </div>
-        </Card>
-    );
+const StatCard = ({ item, trend }) => {
+  const { darkMode } = useThemeContext();
+  const isPositive = trend > 0;
+  
+  return (
+    <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90 hover:from-gray-700/90 hover:to-gray-800/90">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 rounded-lg bg-blue-600/20">
+            <item.Icon className="w-6 h-6 text-blue-400" />
+          </div>
+          <p className="text-sm font-medium text-gray-300">{item.title}</p>
+        </div>
+        {trend !== undefined && (
+          <span className={`text-xs px-2 py-1 rounded-full ${isPositive ? 'bg-green-600/20 text-green-400' : 'bg-red-600/20 text-red-400'}`}>
+            {isPositive ? '+' : ''}{trend}%
+          </span>
+        )}
+      </div>
+      <div className="space-y-1">
+        <p className="text-3xl font-bold text-white">{item.value}</p>
+        <p className="text-sm text-gray-400">{item.subtitle}</p>
+      </div>
+    </Card>
+  );
 };
 
-const PaymentMethodChart = ({ effectivo, tarjeta }) => {
-    const total = effectivo + tarjeta;
-    const data = {
-        labels: ['Efectivo', 'Tarjeta'],
-        datasets: [{
-            data: [effectivo, tarjeta],
-            backgroundColor: ['#10B981', '#3B82F6'],
-            borderWidth: 0,
-        }]
-    };
+const MainChart = ({ data, options, title }) => {
+  return (
+    <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-semibold text-white">{title}</h3>
+        <div className="flex space-x-2">
+          <button className="px-3 py-1 text-xs bg-blue-600/20 text-blue-400 rounded-lg hover:bg-blue-600/30">7D</button>
+          <button className="px-3 py-1 text-xs bg-gray-600/20 text-gray-400 rounded-lg hover:bg-gray-600/30">30D</button>
+        </div>
+      </div>
+      <div className="h-80">
+        <Line data={data} options={options} />
+      </div>
+    </Card>
+  );
+};
 
-    const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
+const PaymentMethodsChart = ({ data }) => {
+  return (
+    <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90">
+      <h3 className="text-lg font-semibold text-white mb-4">Métodos de Pago</h3>
+      <div className="h-48">
+        <Doughnut data={data} options={{
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
             legend: {
-                position: 'bottom',
-                labels: {
-                    padding: 20,
-                    usePointStyle: true,
-                }
+              position: 'bottom',
+              labels: { color: '#D1D5DB', padding: 20 }
             }
-        }
-    };
-
-    return (
-        <Card className="bg-white border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Métodos de Pago</h3>
-            <div className="h-48 mb-4">
-                <Doughnut data={data} options={options} />
-            </div>
-            <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Efectivo</span>
-                    <span className="font-semibold">${effectivo.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                    <span className="text-sm text-gray-600">Tarjeta</span>
-                    <span className="font-semibold">${tarjeta.toFixed(2)}</span>
-                </div>
-            </div>
-        </Card>
-    );
+          }
+        }} />
+      </div>
+    </Card>
+  );
 };
 
-const ServiceTypeChart = ({ data }) => {
-    const serviceTypes = {
-        1: 'Mesa',
-        2: 'Barra',
-        3: 'Para Llevar'
-    };
-
-    const chartData = {
-        labels: Object.values(serviceTypes),
-        datasets: [{
-            label: 'Órdenes por Tipo',
-            data: [
-                data.filter(item => item.tipodeservicio === 1).length,
-                data.filter(item => item.tipodeservicio === 2).length,
-                data.filter(item => item.tipodeservicio === 3).length
-            ],
-            backgroundColor: ['#8B5CF6', '#F59E0B', '#EF4444'],
-            borderRadius: 8,
-            borderSkipped: false,
-        }]
-    };
-
-    const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                grid: {
-                    color: '#F3F4F6'
-                }
-            },
-            x: {
-                grid: {
-                    display: false
-                }
-            }
-        }
-    };
-
-    return (
-        <Card className="bg-white border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Tipos de Servicio</h3>
-            <div className="h-48">
-                <Bar data={chartData} options={options} />
+const TopProductsChart = ({ data }) => {
+  return (
+    <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90">
+      <h3 className="text-lg font-semibold text-white mb-4">Productos Más Vendidos</h3>
+      <div className="space-y-3">
+        {data.map((product, index) => (
+          <div key={product.name} className="flex items-center space-x-3">
+            <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center">
+              <span className="text-xs font-bold text-blue-400">{index + 1}</span>
             </div>
-        </Card>
-    );
+            <div className="flex-1">
+              <p className="text-sm font-medium text-white">{product.name}</p>
+              <div className="w-full bg-gray-700 rounded-full h-2 mt-1">
+                <div 
+                  className="bg-gradient-to-r from-blue-500 to-blue-600 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${(product.sales / data[0].sales) * 100}%` }}
+                />
+              </div>
+            </div>
+            <span className="text-sm text-gray-300">{product.sales}</span>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
 };
 
-const RecentOrdersTable = ({ orders }) => {
-    const getServiceTypeLabel = (type) => {
-        const types = { 1: 'Mesa', 2: 'Barra', 3: 'Para Llevar' };
-        return types[type] || 'Desconocido';
-    };
+const LatestInvoicesTable = ({ invoices }) => {
+  const statusColor = {
+    true: 'bg-green-600/20 text-green-400',
+    false: 'bg-yellow-600/20 text-yellow-400',
+  };
 
-    const getPaymentMethod = (efectivo, tarjeta) => {
-        if (efectivo > 0 && tarjeta > 0) return 'Mixto';
-        if (efectivo > 0) return 'Efectivo';
-        if (tarjeta > 0) return 'Tarjeta';
-        return 'Sin pago';
-    };
+  const serviceTypeNames = {
+    1: 'Mesa',
+    2: 'Mostrador', 
+    3: 'Para Llevar'
+  };
 
-    return (
-        <Card className="bg-white border-gray-200">
-            <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Órdenes Recientes</h3>
-                <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">Ver todas</button>
-            </div>
-            <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                    <thead>
-                        <tr>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cheque</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mesa</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Servicio</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pago</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hora</th>
-                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                        {orders.map((order) => (
-                            <tr key={order.numcheque} className="hover:bg-gray-50 transition-colors duration-150">
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <div className="flex items-center">
-                                        <div className="flex-shrink-0 h-8 w-8">
-                                            <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center">
-                                                <DocumentTextIcon className="h-4 w-4 text-blue-600" />
-                                            </div>
-                                        </div>
-                                        <div className="ml-4">
-                                            <div className="text-sm font-medium text-gray-900">#{order.numcheque}</div>
-                                            <div className="text-sm text-gray-500">Folio: {order.folio}</div>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                                    {order.mesa || 'N/A'}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                        {getServiceTypeLabel(order.tipodeservicio)}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                    ${order.total.toFixed(2)}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                        getPaymentMethod(order.efectivo, order.tarjeta) === 'Efectivo' ? 'bg-green-100 text-green-800' :
-                                        getPaymentMethod(order.efectivo, order.tarjeta) === 'Tarjeta' ? 'bg-blue-100 text-blue-800' :
-                                        'bg-yellow-100 text-yellow-800'
-                                    }`}>
-                                        {getPaymentMethod(order.efectivo, order.tarjeta)}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap">
-                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                                        order.pagado ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                    }`}>
-                                        {order.pagado ? 'Pagado' : 'Pendiente'}
-                                    </span>
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                    {new Date(order.fecha).toLocaleTimeString('es-MX', { 
-                                        hour: '2-digit', 
-                                        minute: '2-digit' 
-                                    })}
-                                </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <div className="flex items-center space-x-2">
-                                        <button className="text-blue-600 hover:text-blue-900">
-                                            <EyeIcon className="h-4 w-4" />
-                                        </button>
-                                        <button className="text-gray-600 hover:text-gray-900">
-                                            <DocumentArrowDownIcon className="h-4 w-4" />
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-        </Card>
-    );
+  return (
+    <Card className="bg-gradient-to-br from-gray-800/90 to-gray-900/90">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-xl font-semibold text-white">Últimos Cheques</h3>
+        <button className="px-4 py-2 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+          Ver Todo
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full">
+          <thead>
+            <tr className="border-b border-gray-700">
+              {['Folio', 'Mesa', 'Total', 'Artículos', 'Pago', 'Estado', 'Fecha'].map(header => (
+                <th key={header} className="py-3 px-4 text-left text-sm font-semibold text-gray-300">
+                  {header}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-700">
+            {invoices.map(invoice => (
+              <tr key={invoice.numcheque} className="hover:bg-gray-700/30 transition-colors">
+                <td className="py-3 px-4">
+                  <span className="font-mono text-sm text-white">#{invoice.folio}</span>
+                </td>
+                <td className="py-3 px-4">
+                  <span className="text-sm text-gray-300">
+                    {invoice.mesa || serviceTypeNames[invoice.tipodeservicio] || 'N/A'}
+                  </span>
+                </td>
+                <td className="py-3 px-4">
+                  <span className="font-semibold text-white">${invoice.total.toFixed(2)}</span>
+                </td>
+                <td className="py-3 px-4">
+                  <span className="text-sm text-gray-300">{invoice.totalarticulos}</span>
+                </td>
+                <td className="py-3 px-4">
+                  <div className="flex items-center space-x-1">
+                    {invoice.efectivo > 0 && <CurrencyDollarIcon className="w-4 h-4 text-green-400" />}
+                    {invoice.tarjeta > 0 && <CreditCardIcon className="w-4 h-4 text-blue-400" />}
+                    <span className="text-xs text-gray-400">
+                      {invoice.efectivo > 0 && invoice.tarjeta > 0 ? 'Mixto' : 
+                       invoice.efectivo > 0 ? 'Efectivo' : 'Tarjeta'}
+                    </span>
+                  </div>
+                </td>
+                <td className="py-3 px-4">
+                  <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${statusColor[invoice.pagado]}`}>
+                    {invoice.pagado ? 'Pagado' : 'Pendiente'}
+                  </span>
+                </td>
+                <td className="py-3 px-4">
+                  <span className="text-sm text-gray-400">
+                    {new Date(invoice.fecha).toLocaleDateString('es-MX')}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
+  );
 };
 
-const SalesChart = ({ data }) => {
-    const chartData = {
-        labels: data.map(item => new Date(item.fecha).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })),
-        datasets: [{
-            label: 'Ventas por Hora',
-            data: data.map(item => item.total),
-            fill: true,
-            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-            borderColor: '#3B82F6',
-            borderWidth: 3,
-            tension: 0.4,
-            pointBackgroundColor: '#3B82F6',
-            pointBorderColor: '#ffffff',
-            pointBorderWidth: 2,
-            pointRadius: 6,
-        }]
-    };
-
-    const options = {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-            legend: {
-                display: false
-            }
-        },
-        scales: {
-            y: {
-                beginAtZero: true,
-                grid: {
-                    color: '#F3F4F6'
-                },
-                ticks: {
-                    callback: function(value) {
-                        return '$' + value;
-                    }
-                }
-            },
-            x: {
-                grid: {
-                    display: false
-                }
-            }
-        }
-    };
-
-    return (
-        <Card className="bg-white border-gray-200 md:col-span-2">
-            <div className="flex items-center justify-between mb-6">
-                <h3 className="text-lg font-semibold text-gray-900">Tendencia de Ventas</h3>
-                <div className="flex items-center space-x-2">
-                    <CalendarDaysIcon className="h-5 w-5 text-gray-400" />
-                    <span className="text-sm text-gray-500">Hoy</span>
-                </div>
-            </div>
-            <div className="h-80">
-                <Line data={chartData} options={options} />
-            </div>
-        </Card>
-    );
-};
+const DashboardSkeleton = () => (
+  <div className="animate-pulse space-y-8">
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {[...Array(4)].map((_, i) => (
+        <div key={i} className="h-32 bg-gray-800/50 rounded-2xl"></div>
+      ))}
+    </div>
+    <div className="h-96 bg-gray-800/50 rounded-2xl"></div>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="h-80 bg-gray-800/50 rounded-2xl"></div>
+      <div className="h-80 bg-gray-800/50 rounded-2xl"></div>
+    </div>
+  </div>
+);
 
 function Dashboard() {
-    const [dashboardData, setDashboardData] = useState(null);
-    const [isLoading, setIsLoading] = useState(true);
+  const { darkMode } = useThemeContext();
+  const { user } = useAuth();
+  
+  const [dashboardData, setDashboardData] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-    useEffect(() => {
-        // Simular carga de datos
-        setTimeout(() => {
-            const chequesData = mockChequesData;
-            const productsData = mockProductsData;
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Simulamos la carga de datos
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        const chequesData = mockChequesData;
+        const productsData = mockProductsData;
+        
+        // Procesamiento de datos más detallado
+        const totalFacturado = chequesData.reduce((acc, cheque) => acc + cheque.total, 0);
+        const totalEfectivo = chequesData.reduce((acc, cheque) => acc + cheque.efectivo, 0);
+        const totalTarjeta = chequesData.reduce((acc, cheque) => acc + cheque.tarjeta, 0);
+        const totalArticulos = chequesData.reduce((acc, cheque) => acc + cheque.totalarticulos, 0);
+        const totalPersonas = chequesData.reduce((acc, cheque) => acc + cheque.nopersonas, 0);
+        const facturasEmitidas = chequesData.length;
+        const ticketPromedio = facturasEmitidas > 0 ? totalFacturado / facturasEmitidas : 0;
+        
+        // Datos por día (última semana)
+        const salesByDay = {};
+        const today = new Date();
+        
+        for (let i = 6; i >= 0; i--) {
+          const date = new Date(today);
+          date.setDate(date.getDate() - i);
+          const dayName = date.toLocaleDateString('es-MX', { weekday: 'short' });
+          salesByDay[dayName] = Math.random() * 1000 + 200; // Datos simulados
+        }
 
-            // Calcular métricas
-            const totalVentas = chequesData.reduce((acc, cheque) => acc + cheque.total, 0);
-            const totalEfectivo = chequesData.reduce((acc, cheque) => acc + cheque.efectivo, 0);
-            const totalTarjeta = chequesData.reduce((acc, cheque) => acc + cheque.tarjeta, 0);
-            const totalArticulos = chequesData.reduce((acc, cheque) => acc + cheque.totalarticulos, 0);
-            const totalClientes = chequesData.reduce((acc, cheque) => acc + cheque.nopersonas, 0);
-            const ticketPromedio = chequesData.length > 0 ? totalVentas / chequesData.length : 0;
+        const processedData = {
+          kpis: [
+            { 
+              title: 'Ventas del Día', 
+              value: `$${totalFacturado.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, 
+              subtitle: `${facturasEmitidas} cheques`,
+              Icon: BanknotesIcon 
+            },
+            { 
+              title: 'Ticket Promedio', 
+              value: `$${ticketPromedio.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, 
+              subtitle: 'Por cliente',
+              Icon: ArrowTrendingUpIcon 
+            },
+            { 
+              title: 'Artículos Vendidos', 
+              value: totalArticulos.toString(), 
+              subtitle: `${totalPersonas} personas atendidas`,
+              Icon: CubeIcon 
+            },
+            { 
+              title: 'Productos Activos', 
+              value: productsData.length.toString(), 
+              subtitle: 'En catálogo',
+              Icon: DocumentTextIcon 
+            }
+          ],
+          salesOverTime: {
+            labels: Object.keys(salesByDay),
+            data: Object.values(salesByDay),
+          },
+          paymentMethods: {
+            efectivo: totalEfectivo,
+            tarjeta: totalTarjeta
+          },
+          topProducts: [
+            { name: '1/4 DE POLLO', sales: 25 },
+            { name: 'GALLITOS 6 PZA', sales: 18 },
+            { name: 'AGUA 500ML', sales: 15 },
+            { name: 'ARROZ', sales: 12 }
+          ],
+          latestInvoices: chequesData.slice(0, 5)
+        };
 
-            const processedData = {
-                kpis: {
-                    totalVentas,
-                    totalEfectivo,
-                    totalTarjeta,
-                    totalArticulos,
-                    totalClientes,
-                    ticketPromedio,
-                    totalOrdenes: chequesData.length,
-                    productosRegistrados: productsData.length
-                },
-                cheques: chequesData.reverse(), // Mostrar más recientes primero
-                productos: productsData
-            };
+        setDashboardData(processedData);
+        setError(null);
+      } catch (err) {
+        console.error("Error cargando datos del dashboard:", err);
+        setError(err.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
 
-            setDashboardData(processedData);
-            setIsLoading(false);
-        }, 1000);
-    }, []);
+    fetchDashboardData();
+  }, []);
 
-    if (isLoading) {
-        return (
-            <div className="min-h-screen bg-gray-50 p-6">
-                <div className="max-w-7xl mx-auto">
-                    <div className="animate-pulse">
-                        <div className="h-8 bg-gray-200 rounded w-1/4 mb-8"></div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                            {[...Array(8)].map((_, i) => (
-                                <div key={i} className="h-32 bg-gray-200 rounded-2xl"></div>
-                            ))}
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                            <div className="h-80 bg-gray-200 rounded-2xl md:col-span-2"></div>
-                            <div className="h-80 bg-gray-200 rounded-2xl"></div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
+  const chartData = {
+    labels: dashboardData?.salesOverTime.labels || [],
+    datasets: [{
+      label: 'Ventas ($)',
+      data: dashboardData?.salesOverTime.data || [],
+      fill: true,
+      backgroundColor: 'rgba(59, 130, 246, 0.1)',
+      borderColor: '#3B82F6',
+      borderWidth: 3,
+      tension: 0.4,
+      pointBackgroundColor: '#3B82F6',
+      pointBorderColor: '#ffffff',
+      pointBorderWidth: 2,
+      pointRadius: 6,
+      pointHoverRadius: 8,
+    }]
+  };
+
+  const paymentData = {
+    labels: ['Efectivo', 'Tarjeta'],
+    datasets: [{
+      data: dashboardData ? [dashboardData.paymentMethods.efectivo, dashboardData.paymentMethods.tarjeta] : [],
+      backgroundColor: ['#10B981', '#3B82F6'],
+      borderWidth: 0,
+    }]
+  };
+
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: 'rgba(17, 24, 39, 0.95)',
+        titleColor: '#F9FAFB',
+        bodyColor: '#F9FAFB',
+        borderColor: '#374151',
+        borderWidth: 1,
+      }
+    },
+    scales: {
+      x: {
+        grid: { color: '#374151', drawBorder: false },
+        ticks: { color: '#9CA3AF' }
+      },
+      y: {
+        grid: { color: '#374151', drawBorder: false },
+        ticks: { 
+          color: '#9CA3AF',
+          callback: (value) => `$${value}`
+        }
+      }
     }
+  };
 
+  if (error) {
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            <div className="max-w-7xl mx-auto">
-                {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900">Dashboard Gallozon</h1>
-                    <p className="mt-2 text-gray-600">Resumen completo de tu punto de venta</p>
-                    <div className="mt-4 flex items-center text-sm text-gray-500">
-                        <ClockIcon className="h-4 w-4 mr-2" />
-                        Última actualización: {new Date().toLocaleString('es-MX')}
-                    </div>
-                </div>
-
-                {/* KPI Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <StatCard
-                        title="Ventas Total"
-                        value={`$${dashboardData.kpis.totalVentas.toFixed(2)}`}
-                        subtitle="Ingresos del día"
-                        icon={BanknotesIcon}
-                        color="blue"
-                        trend="up"
-                        trendValue="12.5%"
-                    />
-                    <StatCard
-                        title="Órdenes"
-                        value={dashboardData.kpis.totalOrdenes}
-                        subtitle="Cheques procesados"
-                        icon={DocumentTextIcon}
-                        color="green"
-                        trend="up"
-                        trendValue="8.2%"
-                    />
-                    <StatCard
-                        title="Ticket Promedio"
-                        value={`$${dashboardData.kpis.ticketPromedio.toFixed(2)}`}
-                        subtitle="Por transacción"
-                        icon={ChartBarIcon}
-                        color="purple"
-                        trend="up"
-                        trendValue="5.1%"
-                    />
-                    <StatCard
-                        title="Clientes"
-                        value={dashboardData.kpis.totalClientes}
-                        subtitle="Personas atendidas"
-                        icon={UserGroupIcon}
-                        color="orange"
-                        trend="up"
-                        trendValue="15.3%"
-                    />
-                    <StatCard
-                        title="Efectivo"
-                        value={`$${dashboardData.kpis.totalEfectivo.toFixed(2)}`}
-                        subtitle="Pagos en efectivo"
-                        icon={BanknotesIcon}
-                        color="green"
-                    />
-                    <StatCard
-                        title="Tarjeta"
-                        value={`$${dashboardData.kpis.totalTarjeta.toFixed(2)}`}
-                        subtitle="Pagos con tarjeta"
-                        icon={CreditCardIcon}
-                        color="blue"
-                    />
-                    <StatCard
-                        title="Artículos"
-                        value={dashboardData.kpis.totalArticulos}
-                        subtitle="Productos vendidos"
-                        icon={ShoppingCartIcon}
-                        color="indigo"
-                    />
-                    <StatCard
-                        title="Productos"
-                        value={dashboardData.kpis.productosRegistrados}
-                        subtitle="En catálogo"
-                        icon={CubeIcon}
-                        color="red"
-                    />
-                </div>
-
-                {/* Charts Section */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                    <SalesChart data={dashboardData.cheques} />
-                    <PaymentMethodChart 
-                        efectivo={dashboardData.kpis.totalEfectivo} 
-                        tarjeta={dashboardData.kpis.totalTarjeta} 
-                    />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                    <ServiceTypeChart data={dashboardData.cheques} />
-                    <Card className="bg-white border-gray-200">
-                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Métricas Adicionales</h3>
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                                <span className="text-gray-600">Cambio Entregado</span>
-                                <span className="font-semibold">
-                                    ${dashboardData.cheques.reduce((acc, c) => acc + c.cambio, 0).toFixed(2)}
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                                <span className="text-gray-600">Órdenes Mesa</span>
-                                <span className="font-semibold">
-                                    {dashboardData.cheques.filter(c => c.tipodeservicio === 1).length}
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center p-4 bg-gray-50 rounded-lg">
-                                <span className="text-gray-600">Para Llevar</span>
-                                <span className="font-semibold">
-                                    {dashboardData.cheques.filter(c => c.tipodeservicio === 3).length}
-                                </span>
-                            </div>
-                            <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
-                                <span className="text-green-700 font-medium">Órdenes Pagadas</span>
-                                <span className="font-semibold text-green-700">
-                                    {dashboardData.cheques.filter(c => c.pagado).length}/{dashboardData.cheques.length}
-                                </span>
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-
-                {/* Recent Orders Table */}
-                <RecentOrdersTable orders={dashboardData.cheques} />
-            </div>
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-400 text-xl mb-2">⚠️ Error de Conexión</div>
+          <p className="text-gray-300">{error}</p>
         </div>
+      </div>
     );
+  }
+
+  return (
+    <main className="min-h-screen w-full p-4 sm:p-6 lg:p-8 bg-gradient-to-br from-gray-900 via-gray-900 to-blue-900">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
+            Dashboard Gallozon POS
+          </h1>
+          <p className="mt-2 text-gray-400">Resumen en tiempo real de tu punto de venta</p>
+        </div>
+        
+        {isLoading ? <DashboardSkeleton /> : (
+          dashboardData && (
+            <div className="space-y-8">
+              {/* KPIs Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {dashboardData.kpis.map((item, index) => (
+                  <StatCard key={item.title} item={item} trend={[8.5, -2.1, 15.3, 5.7][index]} />
+                ))}
+              </div>
+              
+              {/* Main Chart */}
+              <MainChart 
+                data={chartData} 
+                options={chartOptions}
+                title="Ventas de la Última Semana"
+              />
+
+              {/* Secondary Charts */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <PaymentMethodsChart data={paymentData} />
+                <TopProductsChart data={dashboardData.topProducts} />
+              </div>
+
+              {/* Latest Invoices Table */}
+              <LatestInvoicesTable invoices={dashboardData.latestInvoices} />
+            </div>
+          )
+        )}
+      </div>
+    </main>
+  );
 }
 
 export default Dashboard;
