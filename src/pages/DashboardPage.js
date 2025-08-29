@@ -3,6 +3,7 @@ import { Line, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, Filler, ArcElement } from 'chart.js';
 import { useThemeContext } from '../context/ThemeContext';
 import { useAuth } from '../hooks/useAuth';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowTrendingUpIcon, BanknotesIcon, DocumentTextIcon, CubeIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
 
 // Registramos los componentes de ChartJS, incluyendo ArcElement para el gráfico de dona.
