@@ -1,31 +1,10 @@
-// src/pages/TicketSearch.js
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useThemeContext } from '../context/ThemeContext';
 import { TicketIcon, BuildingStorefrontIcon, ArrowRightIcon, CheckBadgeIcon } from '@heroicons/react/24/solid';
 import { DocumentTextIcon, AtSymbolIcon, UserCircleIcon } from '@heroicons/react/24/outline';
 
+// --- SUBCOMPONENTES DE UI ---
 
-// --- MOCK DATA & HELPERS ---
-const mockBrandingData = {
-    name: 'El Sazón Porteño',
-    logoUrl: 'https://tailwindui.com/img/logos/mark.svg?color=white',
-    primaryColor: '#005DAB',
-    secondaryColor: '#F3F4F6'
-};
-
-const mockFoundTicket = {
-    id: 'T-84321',
-    amount: 450.00,
-    date: '2025-06-19',
-    items: [
-        { qty: 1, name: 'Tacos de Camarón', price: 150.00 },
-        { qty: 2, name: 'Aguas Frescas', price: 60.00 },
-        { qty: 1, name: 'Guacamole', price: 90.00 },
-    ]
-};
-
-// Componente de Input reutilizable para el formulario fiscal
 const FiscalInput = ({ icon: Icon, label, ...props }) => (
     <div>
         <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">{label}</label>
@@ -36,55 +15,100 @@ const FiscalInput = ({ icon: Icon, label, ...props }) => (
     </div>
 );
 
-/**
- * TicketSearch - Reimaginado como un asistente de facturación de autoservicio.
- * * Estrategia de UX/UI:
- * 1.  Reducción Drástica de Fricción: Se simplifica la búsqueda a un solo campo (Número de Ticket),
- * eliminando la necesidad de que el usuario recuerde el monto y la fecha. Este es el cambio de UX más impactante.
- * 2.  Flujo Guiado por Pasos: Se reemplaza el flujo de "búsqueda -> modal" por un asistente de 3 pasos
- * dentro de una única tarjeta. La transición es más fluida, moderna y mantiene al usuario enfocado.
- * 3.  Diseño Brandeado y de Confianza: El diseño central se personaliza con el logo y color del
- * restaurante, mientras que elementos como la guía visual del ticket y el pie de página "Powered by NextManager"
- * construyen confianza y profesionalismo.
- * 4.  Feedback Claro en Cada Etapa: El usuario siempre sabe en qué paso está y recibe una confirmación
- * visual clara al encontrar el ticket y al generar la factura con éxito.
- */
+const Loader = () => (
+    <div className="absolute inset-0 bg-white/50 dark:bg-gray-800/50 flex items-center justify-center">
+        <svg className="animate-spin h-8 w-8 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+    </div>
+);
+
+
+// --- COMPONENTE PRINCIPAL ---
+
 function TicketSearch() {
     const [branding, setBranding] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
     const [ticketNumber, setTicketNumber] = useState('');
     const [foundTicket, setFoundTicket] = useState(null);
     const [fiscalData, setFiscalData] = useState({ rfc: '', razonSocial: '', email: '' });
+    const [error, setError] = useState('');
 
-    // Simulación de carga de branding basado en subdominio
     useEffect(() => {
-        const timer = setTimeout(() => {
-            setBranding(mockBrandingData);
-            setIsLoading(false);
-        }, 1500);
-        return () => clearTimeout(timer);
+        const fetchBrandingData = async () => {
+            setIsLoading(true);
+            try {
+                const subdomain = window.location.hostname.split('.')[0];
+                const response = await fetch(`/api/restaurants/portal-branding/${subdomain}`);
+                const data = await response.json();
+                if (!response.ok || !data.success) {
+                    throw new Error(data.message || 'No se pudo cargar la información de este portal.');
+                }
+                setBranding(data.branding);
+            } catch (err) {
+                console.error("Error fetching branding:", err);
+                setError(err.message);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchBrandingData();
     }, []);
 
-    // Simulación de handlers
-    const handleSearch = (e) => {
+    const handleSearch = async (e) => {
         e.preventDefault();
         if (!ticketNumber) return;
-        console.log('Buscando ticket:', ticketNumber);
-        setFoundTicket(mockFoundTicket);
-        setCurrentStep(2); // Avanzar al siguiente paso
+        setError('');
+        setIsSubmitting(true);
+        try {
+            const response = await fetch(`/api/restaurants/portal/${branding.restaurantId}/search-ticket`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticketNumber }),
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'Ticket no encontrado o inválido.');
+            }
+            setFoundTicket(data.ticket);
+            setCurrentStep(2);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
-    const handleGenerateInvoice = (e) => {
+    const handleGenerateInvoice = async (e) => {
         e.preventDefault();
-        console.log('Generando factura con datos:', fiscalData);
-        setCurrentStep(3); // Avanzar al paso de éxito
+        setError('');
+        setIsSubmitting(true);
+        try {
+            const response = await fetch(`/api/restaurants/portal/${branding.restaurantId}/generate-invoice`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ticket: foundTicket, fiscalData }),
+            });
+            const data = await response.json();
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'No se pudo generar la factura.');
+            }
+            setCurrentStep(3);
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
     
     const handleReset = () => {
         setTicketNumber('');
         setFoundTicket(null);
         setFiscalData({ rfc: '', razonSocial: '', email: '' });
+        setError('');
         setCurrentStep(1);
     };
 
@@ -92,6 +116,10 @@ function TicketSearch() {
         return <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center"><p className="text-gray-500">Cargando portal...</p></div>;
     }
 
+    if (error && !branding) {
+        return <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center"><p className="text-red-500 text-center p-4">{error}</p></div>;
+    }
+    
     const primaryColor = branding?.primaryColor || '#005DAB';
 
     return (
@@ -104,9 +132,12 @@ function TicketSearch() {
 
             <main className="flex-grow flex items-center justify-center p-4">
                 <motion.div
-                    className="w-full max-w-lg bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-xl overflow-hidden"
+                    className="w-full max-w-lg bg-white dark:bg-slate-800/50 border border-gray-200 dark:border-slate-700 rounded-2xl shadow-xl overflow-hidden relative"
                     animate={{ height: 'auto' }}
                 >
+                    <AnimatePresence>
+                        {isSubmitting && <Loader />}
+                    </AnimatePresence>
                     <AnimatePresence mode="wait">
                         {/* --- PASO 1: BÚSQUEDA DE TICKET --- */}
                         {currentStep === 1 && (
@@ -117,7 +148,8 @@ function TicketSearch() {
                                 </div>
                                 <form onSubmit={handleSearch} className="mt-8 space-y-4">
                                     <FiscalInput icon={TicketIcon} label="Número de Ticket" value={ticketNumber} onChange={e => setTicketNumber(e.target.value)} placeholder="Ej. A25-B7C91" required />
-                                    <button type="submit" className="w-full text-lg font-semibold text-white py-3 rounded-xl transition-transform transform hover:-translate-y-1" style={{ backgroundColor: primaryColor }}>
+                                    {error && <p className="text-red-500 text-xs text-center">{error}</p>}
+                                    <button type="submit" disabled={isSubmitting} className="w-full text-lg font-semibold text-white py-3 rounded-xl transition-transform transform hover:-translate-y-1 disabled:opacity-50" style={{ backgroundColor: primaryColor }}>
                                         Buscar Ticket
                                     </button>
                                 </form>
@@ -134,17 +166,18 @@ function TicketSearch() {
                                     <h2 className="text-xl font-bold">Ticket Encontrado</h2>
                                     <div className="flex justify-between text-sm mt-2 text-gray-600 dark:text-slate-300">
                                         <p>Total: <span className="font-semibold text-gray-800 dark:text-white">${foundTicket.amount.toFixed(2)}</span></p>
-                                        <p>Fecha: <span className="font-semibold text-gray-800 dark:text-white">{foundTicket.date}</span></p>
+                                        <p>Fecha: <span className="font-semibold text-gray-800 dark:text-white">{new Date(foundTicket.date).toLocaleDateString()}</span></p>
                                     </div>
                                 </div>
                                 <h3 className="font-semibold mb-4">Ingresa tus datos para facturar</h3>
                                 <form onSubmit={handleGenerateInvoice} className="space-y-4">
-                                    <FiscalInput icon={UserCircleIcon} label="RFC" name="rfc" value={fiscalData.rfc} onChange={e => setFiscalData({...fiscalData, rfc: e.target.value})} placeholder="Tu RFC" required />
+                                    <FiscalInput icon={UserCircleIcon} label="RFC" name="rfc" value={fiscalData.rfc} onChange={e => setFiscalData({...fiscalData, rfc: e.target.value.toUpperCase()})} placeholder="Tu RFC" required />
                                     <FiscalInput icon={BuildingStorefrontIcon} label="Razón Social" name="razonSocial" value={fiscalData.razonSocial} onChange={e => setFiscalData({...fiscalData, razonSocial: e.target.value})} placeholder="Nombre o Razón Social" required />
                                     <FiscalInput icon={AtSymbolIcon} label="Correo para recibir factura" name="email" type="email" value={fiscalData.email} onChange={e => setFiscalData({...fiscalData, email: e.target.value})} placeholder="tu@correo.com" required />
+                                    {error && <p className="text-red-500 text-xs text-center">{error}</p>}
                                     <div className="flex items-center gap-4 pt-4">
-                                        <button type="button" onClick={handleReset} className="w-full text-sm font-semibold py-3 rounded-xl border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700">Buscar otro ticket</button>
-                                        <button type="submit" className="w-full text-lg font-semibold text-white py-3 rounded-xl transition-transform transform hover:-translate-y-1" style={{ backgroundColor: primaryColor }}>
+                                        <button type="button" onClick={handleReset} disabled={isSubmitting} className="w-full text-sm font-semibold py-3 rounded-xl border border-gray-300 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700 disabled:opacity-50">Buscar otro ticket</button>
+                                        <button type="submit" disabled={isSubmitting} className="w-full text-lg font-semibold text-white py-3 rounded-xl transition-transform transform hover:-translate-y-1 disabled:opacity-50" style={{ backgroundColor: primaryColor }}>
                                             Generar Factura <ArrowRightIcon className="inline w-5 h-5 ml-1" />
                                         </button>
                                     </div>
@@ -157,7 +190,7 @@ function TicketSearch() {
                             <motion.div key={3} initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.4, ease: 'easeOut' }} className="p-8 text-center">
                                 <CheckBadgeIcon className="w-20 h-20 text-green-500 mx-auto mb-4" />
                                 <h2 className="text-2xl font-bold">¡Factura Generada!</h2>
-                                <p className="mt-2 text-gray-600 dark:text-slate-300">Hemos enviado la factura a <strong className="text-gray-800 dark:text-white">{fiscalData.email}</strong>. Revisa tu bandeja de entrada (y la de spam).</p>
+                                <p className="mt-2 text-gray-600 dark:text-slate-300">Hemos enviado la factura a <strong className="text-gray-800 dark:text-white">{fiscalData.email}</strong>. Revisa tu bandeja de entrada.</p>
                                 <button onClick={handleReset} className="w-full mt-6 text-lg font-semibold text-white py-3 rounded-xl" style={{ backgroundColor: primaryColor }}>
                                     Facturar otro ticket
                                 </button>
