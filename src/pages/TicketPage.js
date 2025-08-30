@@ -38,25 +38,45 @@ function TicketSearch() {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        const fetchBrandingData = async () => {
-            setIsLoading(true);
-            try {
-                const subdomain = window.location.hostname.split('.')[0];
-                const response = await fetch(`/api/restaurants/portal-branding/${subdomain}`);
-                const data = await response.json();
-                if (!response.ok || !data.success) {
-                    throw new Error(data.message || 'No se pudo cargar la información de este portal.');
-                }
-                setBranding(data.branding);
-            } catch (err) {
-                console.error("Error fetching branding:", err);
-                setError(err.message);
-            } finally {
-                setIsLoading(false);
+    const fetchBrandingData = async () => {
+        setIsLoading(true);
+        try {
+            // --- CAMBIO CLAVE ---
+            // Comentamos la lógica del subdominio
+            // const subdomain = window.location.hostname.split('.')[0];
+            
+            // Y usamos directamente el ID del restaurante que ya conocemos.
+            // REEMPLAZA ESTE ID con el de tu restaurante si es diferente.
+            const restaurantIdForTesting = 'c9b67b09-b2e4-4e15-819a-f6871bb636bf'; 
+
+            // El endpoint ahora se construye de forma diferente para la prueba
+            const response = await fetch(`/api/restaurants/${restaurantIdForTesting}`);
+            const data = await response.json();
+
+            if (!response.ok || !data.success) {
+                throw new Error(data.message || 'No se pudo cargar la información del restaurante.');
             }
-        };
-        fetchBrandingData();
-    }, []);
+            
+            // Creamos un objeto 'branding' compatible con el resto del componente
+            const restaurant = data.restaurant;
+            const brandingData = {
+                restaurantId: restaurant.id,
+                name: restaurant.name,
+                logoUrl: restaurant.logoUrl,
+                primaryColor: restaurant.primaryColor || '#005DAB'
+            };
+            setBranding(brandingData);
+
+        } catch (err) {
+            console.error("Error fetching branding:", err);
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    fetchBrandingData();
+}, []); // El array de dependencias vacío es correcto aquí
 
     const handleSearch = async (e) => {
         e.preventDefault();
