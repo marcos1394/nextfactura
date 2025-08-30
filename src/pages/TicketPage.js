@@ -42,45 +42,61 @@ function TicketSearch() {
    // En src/pages/TicketSearch.js
 
 useEffect(() => {
-    const fetchBrandingData = async () => {
+    const fetchPortalData = async () => {
         setIsLoading(true);
         try {
-            // Usamos el ID de restaurante fijo para las pruebas
-            const restaurantIdForTesting = 'c9b67b09-b2e4-4e15-819a-f6871bb636bf';
-
-            // --- CORRECCIÓN CLAVE ---
-            // Apuntamos al nuevo endpoint PÚBLICO y quitamos la cabecera de autorización
-            const response = await fetch(`/api/restaurants/public/data/${restaurantIdForTesting}`);
-            
+            // Para las pruebas, en lugar de usar un ID fijo, llamaremos al endpoint
+            // que nos da toda la información de la cuenta, incluyendo todas las sucursales.
+            const response = await fetch(`/api/auth/account-details`, {
+                headers: { 'Authorization': localStorage.getItem('authToken') }
+            });
             const data = await response.json();
 
             if (!response.ok || !data.success) {
-                throw new Error(data.message || 'No se pudo cargar la información del restaurante.');
+                throw new Error(data.message || 'No se pudo cargar la información del portal.');
             }
-            
-            const restaurant = data.restaurant;
-            
-            if (!restaurant.PortalConfig) {
-                throw new Error('La configuración del portal para este restaurante no está completa.');
+
+            const accountData = data.data;
+
+            if (!accountData.restaurants || accountData.restaurants.length === 0) {
+                throw new Error("No se encontraron restaurantes para este propietario.");
             }
+
+            // --- LÓGICA CORREGIDA ---
+            // 1. Guardamos la lista completa de restaurantes (sucursales) en el estado
+            setAllRestaurants(accountData.restaurants);
+
+            // 2. Asumimos que el branding principal es el del primer restaurante de la lista
+            const mainRestaurant = accountData.restaurants[0];
             
+            // 3. Obtenemos los datos de PortalConfig para el branding
+            // (Esta llamada adicional asegura que tenemos los datos de personalización)
+            const brandingResponse = await fetch(`/api/restaurants/public/data/${mainRestaurant.id}`);
+            const brandingJson = await brandingResponse.json();
+            if (!brandingJson.success) throw new Error("No se pudo cargar la configuración del portal.");
+            
+            const restaurantBranding = brandingJson.restaurant;
+
             const brandingData = {
-                restaurantId: restaurant.id,
-                name: restaurant.PortalConfig.portalName || restaurant.name,
-                logoUrl: restaurant.PortalConfig.logoUrl,
-                primaryColor: restaurant.PortalConfig.primaryColor || '#005DAB'
+                restaurantId: restaurantBranding.id,
+                name: restaurantBranding.PortalConfig?.portalName || restaurantBranding.name,
+                logoUrl: restaurantBranding.PortalConfig?.logoUrl,
+                primaryColor: restaurantBranding.PortalConfig?.primaryColor || '#005DAB'
             };
             setBranding(brandingData);
+            
+            // 4. Pre-seleccionamos el primer restaurante de la lista en el selector
+            setSelectedRestaurantId(mainRestaurant.id);
 
         } catch (err) {
-            console.error("Error fetching branding:", err);
+            console.error("Error fetching portal data:", err);
             setError(err.message);
         } finally {
             setIsLoading(false);
         }
     };
 
-    fetchBrandingData();
+    fetchPortalData();
 }, []);
 
     const handleSearch = async (e) => {
