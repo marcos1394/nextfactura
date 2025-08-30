@@ -41,24 +41,13 @@ function TicketSearch() {
     const fetchBrandingData = async () => {
         setIsLoading(true);
         try {
-            // Usamos directamente el ID del restaurante para la prueba
             const restaurantIdForTesting = 'c9b67b09-b2e4-4e15-819a-f6871bb636bf';
-
-            // --- CORRECCIÓN CLAVE ---
-            // 1. Obtenemos el token de localStorage
             const token = localStorage.getItem('authToken');
-            if (!token) {
-                throw new Error('No se encontró el token de autenticación.');
-            }
+            if (!token) throw new Error('No se encontró el token de autenticación.');
 
-            // 2. Añadimos la cabecera 'Authorization' a la petición
             const response = await fetch(`/api/restaurants/${restaurantIdForTesting}`, {
-                headers: {
-                    'Authorization': token
-                }
+                headers: { 'Authorization': token }
             });
-            // --- FIN DE LA CORRECCIÓN ---
-
             const data = await response.json();
 
             if (!response.ok || !data.success) {
@@ -66,11 +55,14 @@ function TicketSearch() {
             }
             
             const restaurant = data.restaurant;
+            
+            // --- CORRECCIÓN CLAVE ---
+            // Ahora leemos los datos de personalización desde el objeto anidado PortalConfig
             const brandingData = {
                 restaurantId: restaurant.id,
-                name: restaurant.name,
-                logoUrl: restaurant.PortalConfig.logoUrl, // Ajustado a la estructura correcta
-                primaryColor: restaurant.PortalConfig.primaryColor || '#005DAB'
+                name: restaurant.PortalConfig?.portalName || restaurant.name,
+                logoUrl: restaurant.PortalConfig?.logoUrl,
+                primaryColor: restaurant.PortalConfig?.primaryColor || '#005DAB'
             };
             setBranding(brandingData);
 
