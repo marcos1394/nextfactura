@@ -41,29 +41,36 @@ function TicketSearch() {
     const fetchBrandingData = async () => {
         setIsLoading(true);
         try {
-            // --- CAMBIO CLAVE ---
-            // Comentamos la lógica del subdominio
-            // const subdomain = window.location.hostname.split('.')[0];
-            
-            // Y usamos directamente el ID del restaurante que ya conocemos.
-            // REEMPLAZA ESTE ID con el de tu restaurante si es diferente.
-            const restaurantIdForTesting = 'c9b67b09-b2e4-4e15-819a-f6871bb636bf'; 
+            // Usamos directamente el ID del restaurante para la prueba
+            const restaurantIdForTesting = 'c9b67b09-b2e4-4e15-819a-f6871bb636bf';
 
-            // El endpoint ahora se construye de forma diferente para la prueba
-            const response = await fetch(`/api/restaurants/${restaurantIdForTesting}`);
+            // --- CORRECCIÓN CLAVE ---
+            // 1. Obtenemos el token de localStorage
+            const token = localStorage.getItem('authToken');
+            if (!token) {
+                throw new Error('No se encontró el token de autenticación.');
+            }
+
+            // 2. Añadimos la cabecera 'Authorization' a la petición
+            const response = await fetch(`/api/restaurants/${restaurantIdForTesting}`, {
+                headers: {
+                    'Authorization': token
+                }
+            });
+            // --- FIN DE LA CORRECCIÓN ---
+
             const data = await response.json();
 
             if (!response.ok || !data.success) {
                 throw new Error(data.message || 'No se pudo cargar la información del restaurante.');
             }
             
-            // Creamos un objeto 'branding' compatible con el resto del componente
             const restaurant = data.restaurant;
             const brandingData = {
                 restaurantId: restaurant.id,
                 name: restaurant.name,
-                logoUrl: restaurant.logoUrl,
-                primaryColor: restaurant.primaryColor || '#005DAB'
+                logoUrl: restaurant.PortalConfig.logoUrl, // Ajustado a la estructura correcta
+                primaryColor: restaurant.PortalConfig.primaryColor || '#005DAB'
             };
             setBranding(brandingData);
 
@@ -76,7 +83,7 @@ function TicketSearch() {
     };
 
     fetchBrandingData();
-}, []); // El array de dependencias vacío es correcto aquí
+}, []);
 
     const handleSearch = async (e) => {
         e.preventDefault();
