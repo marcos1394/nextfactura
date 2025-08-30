@@ -39,54 +39,48 @@ function TicketSearch() {
     const [allRestaurants, setAllRestaurants] = useState([]);
     const [selectedRestaurantId, setSelectedRestaurantId] = useState('');
 
-   useEffect(() => {
-    const fetchPortalData = async () => {
+   // En src/pages/TicketSearch.js
+
+useEffect(() => {
+    const fetchBrandingData = async () => {
         setIsLoading(true);
         try {
-            // Para las pruebas, obtenemos los datos del usuario completo, que incluye
-            // la lista de sus restaurantes, usando el endpoint que ya tenemos.
-            const response = await fetch(`/api/auth/account-details`, {
-                headers: { 'Authorization': localStorage.getItem('authToken') }
-            });
+            // Usamos el ID de restaurante fijo para las pruebas
+            const restaurantIdForTesting = 'c9b67b09-b2e4-4e15-819a-f6871bb636bf';
+
+            // --- CORRECCIÓN CLAVE ---
+            // Apuntamos al nuevo endpoint PÚBLICO y quitamos la cabecera de autorización
+            const response = await fetch(`/api/restaurants/public/data/${restaurantIdForTesting}`);
+            
             const data = await response.json();
 
             if (!response.ok || !data.success) {
-                throw new Error(data.message || 'No se pudo cargar la información del portal.');
+                throw new Error(data.message || 'No se pudo cargar la información del restaurante.');
             }
-
-            const accountData = data.data;
-
-            // Guardamos la lista completa de restaurantes (sucursales)
-            setAllRestaurants(accountData.restaurants);
-
-            // Asumimos que el branding principal es el del primer restaurante de la lista
-            const mainRestaurant = accountData.restaurants[0];
-            if (mainRestaurant) {
-                // Buscamos la configuración del portal para el branding
-                // (Esta es una llamada adicional necesaria)
-                const brandingResponse = await fetch(`/api/restaurants/${mainRestaurant.id}`);
-                const brandingJson = await brandingResponse.json();
-                
-                const brandingData = {
-                    restaurantId: mainRestaurant.id,
-                    name: brandingJson.restaurant.PortalConfig?.portalName || mainRestaurant.name,
-                    logoUrl: brandingJson.restaurant.PortalConfig?.logoUrl,
-                    primaryColor: brandingJson.restaurant.PortalConfig?.primaryColor || '#005DAB'
-                };
-                setBranding(brandingData);
-                setSelectedRestaurantId(mainRestaurant.id); // Pre-seleccionamos la primera sucursal
-            } else {
-                throw new Error("No se encontraron restaurantes para este propietario.");
+            
+            const restaurant = data.restaurant;
+            
+            if (!restaurant.PortalConfig) {
+                throw new Error('La configuración del portal para este restaurante no está completa.');
             }
+            
+            const brandingData = {
+                restaurantId: restaurant.id,
+                name: restaurant.PortalConfig.portalName || restaurant.name,
+                logoUrl: restaurant.PortalConfig.logoUrl,
+                primaryColor: restaurant.PortalConfig.primaryColor || '#005DAB'
+            };
+            setBranding(brandingData);
 
         } catch (err) {
+            console.error("Error fetching branding:", err);
             setError(err.message);
         } finally {
             setIsLoading(false);
         }
     };
 
-    fetchPortalData();
+    fetchBrandingData();
 }, []);
 
     const handleSearch = async (e) => {
