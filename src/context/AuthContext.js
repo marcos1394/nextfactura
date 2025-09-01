@@ -1,84 +1,80 @@
-import React, { createContext, useState, useEffect, useCallback } from 'react';
-// Importamos las funciones de nuestro servicio de API
-import { loginUser, getAccountDetails, logoutUser } from '../services/api';
+// src/context/AuthContext.js (Versión Web Profesional con Cookies)
 
-// --- EXPORTAMOS EL CONTEXTO ---
+import React, { createContext, useState, useEffect, useCallback, useContext } from 'react';
+import { loginUser, getAccountDetails, logoutUser } from '../services/api';
+import api from '../services/api';
+
 export const AuthContext = createContext(null);
 
-// --- EXPORTAMOS EL PROVEEDOR ---
 export const AuthProvider = ({ children }) => {
-    // Un solo estado para guardar toda la información del usuario (perfil, plan, restaurantes, etc.)
     const [user, setUser] = useState(null);
-    // Estado para saber si estamos verificando la sesión inicial
     const [isLoading, setIsLoading] = useState(true);
 
-    // Esta función valida una sesión existente al cargar o recargar la página.
+    // Esta función verifica si hay una sesión activa pidiendo los datos de la cuenta.
+    // El navegador se encarga de enviar la cookie automáticamente.
     const verifySession = useCallback(async () => {
-        const token = localStorage.getItem('authToken'); // Usamos 'authToken' consistentemente
-        if (!token) {
-            setIsLoading(false);
-            return;
-        }
-        
         try {
-            // Hacemos UNA SOLA llamada al endpoint que nos da toda la información.
             const response = await getAccountDetails();
             if (response.success) {
-                setUser(response.data); // Guardamos el objeto completo { profile, plan, restaurants, billing }
+                setUser(response.data);
             } else {
-                throw new Error("La sesión no es válida.");
+                // Esto puede pasar si la cookie es inválida pero aún existe
+                setUser(null);
             }
         } catch (error) {
-            console.error("Fallo la verificación de la sesión:", error.message);
-            // Si el token es inválido o la API falla, limpiamos todo.
-            localStorage.removeItem('authToken');
+            // Un error 401/403 aquí significa que no hay una cookie válida.
+            console.log("No hay sesión activa.");
             setUser(null);
         } finally {
             setIsLoading(false);
         }
     }, []);
 
-    // Al cargar la aplicación por primera vez, intentamos verificar la sesión.
+    // Al cargar la aplicación, intentamos verificar la sesión.
     useEffect(() => {
         verifySession();
     }, [verifySession]);
 
-    // Función de login, ahora centraliza toda la lógica.
+    // La función login llama al endpoint. El backend se encarga de establecer la cookie.
     const login = async (email, password) => {
         try {
-            const data = await loginUser(email, password);
-            
-            if (data.token) {
-                // 1. Guardamos el token en localStorage.
-                localStorage.setItem('authToken', data.token);
-                
-                // 2. Inmediatamente después de guardar el token, recargamos
-                //    toda la información de la cuenta para que el estado sea consistente.
-                await verifySession();
-            }
-            return data; // Devolvemos la data por si el componente la necesita (ej. para 2FA)
+            await loginUser(email, password);
+            // Si el login es exitoso, la cookie ya está en el navegador.
+            // Ahora, verificamos la sesión para cargar los datos del usuario en el estado de React.
+            await verifySession();
         } catch (error) {
-            // Si el login falla, nos aseguramos de que todo esté limpio.
-            localStorage.removeItem('authToken');
-            setUser(null);
-            throw error; // Lanzamos el error para que LoginPage pueda mostrar un mensaje.
+            setUser(null); // Nos aseguramos de que el estado esté limpio si el login falla
+            throw error; // Lanzamos el error para que el componente LoginPage lo muestre
         }
     };
 
-    const logout = () => {
-        localStorage.removeItem('authToken');
-        setUser(null);
-        logoutUser(); // Notificamos al backend (sin esperar respuesta)
+    // La función logout llama al endpoint que limpia la cookie en el backend.
+    const logout = async () => {
+        try {
+            await logoutUser();
+        } catch (error) {
+            console.error("Error en el logout del backend:", error);
+        } finally {
+            setUser(null); // Limpiamos el estado del usuario en el frontend
+        }
     };
 
-    // El valor que será accesible por toda la aplicación.
     const value = {
         user,
-        isAuthenticated: !!user, // true si hay un objeto de usuario, false si es null
+        isAuthenticated: !!user,
         isLoading,
         login,
         logout,
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+};
+
+// El hook no cambia
+export const useAuth = () => {
+    const context = useContext(AuthContext);
+    if (!context) {
+        throw new Error('useAuth debe ser usado dentro de un AuthProvider');
+    }
+    return context;
 };

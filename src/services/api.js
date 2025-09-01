@@ -4,28 +4,53 @@ import axios from 'axios';
 // =======================================================
 const api = axios.create({
   // La URL base que apunta a tu Nginx reverse proxy.
-  baseURL: '/api', 
+  baseURL: '/api',
+  // ¡CRÍTICO! Esta opción le permite a axios enviar y recibir las cookies
+  // seguras (HttpOnly) que establece tu backend.
+  withCredentials: true,
 });
 
-// Interceptor para añadir automáticamente el token de autenticación a cada petición.
-api.interceptors.request.use(
-  (config) => {
-    // --- CORRECCIÓN CLAVE AQUÍ ---
-    // Cambiamos 'token' por 'authToken' para que sea consistente con AuthContext y UserProfile.
-    const token = localStorage.getItem('authToken'); 
-    if (token) {
-      config.headers['Authorization'] = `${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+// El interceptor de request que añadía el 'Authorization' header desde localStorage
+// se elimina. El navegador ahora maneja el envío de la cookie automáticamente.
 
 
-// 2. FUNCIONES DE LA API PARA RESTAURANTES Y PORTAL
+// 2. FUNCIONES DE LA API (Sin cambios en su lógica interna)
 // =======================================================
+
+// --- Funciones de Autenticación ---
+
+export const loginUser = async (email, password) => {
+    try {
+        // Esta petición hará que el backend establezca la cookie en el navegador.
+        const response = await api.post('/auth/login', { email, password });
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || new Error('Error de conexión o credenciales inválidas.');
+    }
+};
+
+export const getAccountDetails = async () => {
+    try {
+        // El navegador adjuntará la cookie automáticamente a esta petición.
+        const response = await api.get('/auth/account-details');
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || new Error('No se pudieron cargar los datos de la cuenta.');
+    }
+};
+
+export const logoutUser = async () => {
+    try {
+        // Esta petición le dirá al backend que elimine la cookie.
+        const response = await api.post('/auth/logout');
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || new Error('Error al cerrar la sesión.');
+    }
+};
+
+
+// --- Funciones de Restaurantes y Portal ---
 
 export const createRestaurant = async (restaurantData, fiscalData, files) => {
   const formData = new FormData();
@@ -38,7 +63,7 @@ export const createRestaurant = async (restaurantData, fiscalData, files) => {
     formData.append('csdKey', files.csdKey);
   }
   try {
-    const response = await api.post('/restaurants/', formData); // Ruta corregida para consistencia
+    const response = await api.post('/restaurants/', formData);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || 'Error al crear el restaurante');
@@ -95,36 +120,6 @@ export const deleteRestaurant = async (restaurantId) => {
         return response.data;
     } catch (error) {
         throw new Error(error.response?.data?.message || 'Error al eliminar el restaurante');
-    }
-};
-
-
-// --- NUEVO: FUNCIONES DE LA API PARA AUTENTICACIÓN ---
-// =======================================================
-
-export const loginUser = async (email, password) => {
-    try {
-        const response = await api.post('/auth/login', { email, password });
-        return response.data;
-    } catch (error) {
-        throw error.response?.data || new Error('Error de conexión o credenciales inválidas.');
-    }
-};
-
-export const getAccountDetails = async () => {
-    try {
-        const response = await api.get('/auth/account-details');
-        return response.data;
-    } catch (error) {
-        throw error.response?.data || new Error('No se pudieron cargar los datos de la cuenta.');
-    }
-};
-
-export const logoutUser = async () => {
-    try {
-        await api.post('/auth/logout');
-    } catch (error) {
-        console.error("Error notificando al backend sobre el logout:", error);
     }
 };
 
