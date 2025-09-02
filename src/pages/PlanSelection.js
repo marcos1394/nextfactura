@@ -8,59 +8,7 @@ import { CheckIcon, PlusIcon, MinusIcon } from '@heroicons/react/24/solid';
 // --- ESTRUCTURA DE DATOS REFACTORIZADA Y SIMPLIFICADA ---
 // src/pages/PlanSelection.js
 
-const plansData = [
-  {
-    // Objeto con los IDs únicos para cada ciclo
-    ids: {
-      monthly: 'a1b2c3d4-e5f6-7890-1234-100000000001',
-      annually: 'a1b2c3d4-e5f6-7890-1234-200000000001',
-    },
-    name: 'NexFactura',
-    description: 'Ideal para quienes solo necesitan facturación automática y eficiente.',
-    price: { monthly: 450, annually: 4150 },
-    features: [
-      'Facturación automática desde SoftRestaurant',
-      'Portal de auto-facturación para clientes',
-      'Generación de reportes de facturación',
-      'Soporte estándar por correo',
-    ],
-    isHighlighted: false,
-  },
-  {
-    ids: {
-      monthly: 'b1c2d3e4-f5a6-b7c8-d9e0-100000000002',
-      annually: 'b1c2d3e4-f5a6-b7c8-d9e0-200000000002',
-    },
-    name: 'Paquete Completo',
-    description: 'La solución definitiva. Todo el poder de facturación y gestión en un solo lugar.',
-    price: { monthly: 800, annually: 7500 },
-    features: [
-      'Todo lo de NexFactura',
-      'Dashboard de ventas en tiempo real',
-      'Análisis de tendencias y productos',
-      'Exportación de datos avanzada',
-      'Soporte prioritario 24/7',
-      'Sesión de capacitación incluida',
-    ],
-    isHighlighted: true,
-  },
-  {
-    ids: {
-      monthly: 'c1d2e3f4-a5b6-c7d8-e9f0-100000000003',
-      annually: 'c1d2e3f4-a5b6-c7d8-e9f0-200000000003',
-    },
-    name: 'NextManager',
-    description: 'Perfecto para gerentes que buscan análisis y control total de sus ventas.',
-    price: { monthly: 430, annually: 3950 },
-    features: [
-      'Dashboard de ventas en tiempo real',
-      'Análisis de tendencias y productos',
-      'Exportación de datos estándar',
-      'Soporte estándar por correo',
-    ],
-    isHighlighted: false,
-  },
-];
+
 
 const faqData = [
     { question: '¿Puedo cambiar de plan más adelante?', answer: '¡Por supuesto! Puedes mejorar, bajar o cancelar tu plan en cualquier momento directamente desde tu panel de configuración. Queremos que uses lo que mejor se adapte a ti.' },
@@ -122,8 +70,30 @@ function PlanSelection() {
     const navigate = useNavigate();
     const [billingCycle, setBillingCycle] = useState('annually');
     const [expandedFAQ, setExpandedFAQ] = useState(null);
+    const [plans, setPlans] = useState([]); // Para guardar los planes de la API
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
 
    // src/pages/PlanSelection.js
+   useEffect(() => {
+    const fetchPlans = async () => {
+        try {
+            setIsLoading(true);
+            const response = await fetch('/api/payments/plans');
+            const data = await response.json();
+            if (data.success) {
+                setPlans(data.plans);
+            } else {
+                throw new Error('No se pudieron cargar los planes.');
+            }
+        } catch (err) {
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchPlans();
+}, []); // El array vacío asegura que se ejecute solo una vez
 
   const handlePlanSelect = (plan) => {
       const selectedOption = {
@@ -152,10 +122,12 @@ function PlanSelection() {
                         <BillingToggle billingCycle={billingCycle} setBillingCycle={setBillingCycle} />
                     </div>
                 </div>
+                {isLoading && <p className="text-center">Cargando planes...</p>}
+{error && <p className="text-center text-red-500">{error}</p>}
 
                 {/* --- Tabla de Precios --- */}
                 <div className="grid lg:grid-cols-3 gap-8 items-start">
-                    {plansData.map((plan) => (
+                    {plans.map((plan) => (
                         <motion.div
                             key={plan.id}
                             className={`w-full rounded-2xl p-8 border transition-all duration-300 ${
