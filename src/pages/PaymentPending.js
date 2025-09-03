@@ -3,6 +3,8 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
 import { ClockIcon, ShieldCheckIcon } from '@heroicons/react/24/solid';
+import { useAuth } from '../hooks/useAuth'; // Para forzar la recarga de datos
+import { useLocation, useNavigate } from 'react-router-dom';
 
 /**
  * PaymentPending - Transforma la espera ansiosa en una pausa confiable.
@@ -19,6 +21,40 @@ import { ClockIcon, ShieldCheckIcon } from '@heroicons/react/24/solid';
 // El nombre de la función ahora es 'PaymentPending' para coincidir con el export
 function PaymentPending() { 
     const { darkMode } = useThemeContext();
+    const { verifySession } = useAuth(); // Función para recargar los datos del usuario
+    const navigate = useNavigate();
+    const location = useLocation();
+    const purchaseId = new URLSearchParams(location.search).get('external_reference');
+
+    // --- LÓGICA DE POLLING ---
+        // Preguntamos al backend cada 3 segundos si el estado de la compra ha cambiado.
+    const interval = setInterval(async () => {
+            try {
+                const response = await api.get(`/payments/purchase-status/${purchaseId}`);
+                const data = await response.data;
+
+                if (data.success && data.status === 'active') {
+                    // ¡ÉXITO! El webhook ya procesó el pago.
+                    clearInterval(interval);
+                    await verifySession(); // Recargamos los datos del usuario (planes, timbres)
+                    navigate('/payment-success'); // Redirigimos a la pantalla de éxito
+                } else if (data.success && data.status === 'rejected') {
+                    // FALLO. El pago fue rechazado.
+                    clearInterval(interval);
+                    navigate('/payment-failure');
+                }
+                // Si sigue 'pending', no hacemos nada y esperamos a la siguiente verificación.
+                
+            } catch (error) {
+                console.error("Error verificando el estado del pago:", error);
+                // Opcional: manejar un error de red aquí
+            }
+        }, 3000); // 3 segundos
+
+        // Limpiamos el intervalo si el usuario navega a otra página
+        return () => clearInterval(interval);
+
+    } [purchaseId, navigate, verifySession];
 
     // Variante para la animación de los círculos pulsantes
     const pulseVariant = {
@@ -111,7 +147,7 @@ function PaymentPending() {
             </div>
         </div>
     );
-}
+
 
 // La exportación ahora coincide con el nombre de la función
 export default PaymentPending;
