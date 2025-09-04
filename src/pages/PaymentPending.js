@@ -1,34 +1,30 @@
-// src/pages/PaymentPending.js
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
 import { ClockIcon, ShieldCheckIcon } from '@heroicons/react/24/solid';
-import { useAuth } from '../hooks/useAuth'; // Para forzar la recarga de datos
+import { useAuth } from '../hooks/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
+import api from '../services/api'; // Asegúrate de importar tu cliente de API
 
-/**
- * PaymentPending - Transforma la espera ansiosa en una pausa confiable.
- * * Estrategia de UX/UI:
- * 1.  Entorno de Marca Consistente: El uso del layout de dos paneles mantiene al usuario dentro de un
- * entorno familiar y seguro, crucial durante la espera de una confirmación financiera.
- * 2.  Comunicación Clara y Específica: El texto explica exactamente lo que está sucediendo
- * ("Confirmando con el procesador") y establece expectativas claras ("Esto suele tardar unos segundos").
- * 3.  Animación Relajante y Profesional: La animación de los círculos pulsantes es más sofisticada
- * que un simple icono parpadeante. Comunica un proceso activo sin generar estrés.
- * 4.  Panel de Reafirmación: El panel derecho está dedicado a mensajes que calman la ansiedad,
- * recordando al usuario la seguridad del proceso y agradeciéndole su paciencia.
- */
-// El nombre de la función ahora es 'PaymentPending' para coincidir con el export
-function PaymentPending() { 
+function PaymentPending() {
     const { darkMode } = useThemeContext();
-    const { verifySession } = useAuth(); // Función para recargar los datos del usuario
+    const { verifySession } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
+
+    // Extraemos el ID de la compra desde los parámetros de la URL que nos devuelve Mercado Pago
     const purchaseId = new URLSearchParams(location.search).get('external_reference');
 
     // --- LÓGICA DE POLLING ---
+    useEffect(() => {
+        if (!purchaseId) {
+            // Si por alguna razón no hay ID, no podemos verificar. Enviamos al dashboard.
+            navigate('/dashboard');
+            return; // Detenemos la ejecución del efecto
+        }
+
         // Preguntamos al backend cada 3 segundos si el estado de la compra ha cambiado.
-    const interval = setInterval(async () => {
+        const interval = setInterval(async () => {
             try {
                 const response = await api.get(`/payments/purchase-status/${purchaseId}`);
                 const data = await response.data;
@@ -37,24 +33,26 @@ function PaymentPending() {
                     // ¡ÉXITO! El webhook ya procesó el pago.
                     clearInterval(interval);
                     await verifySession(); // Recargamos los datos del usuario (planes, timbres)
-                    navigate('/payment-success'); // Redirigimos a la pantalla de éxito
+                    navigate('/payment-success');
                 } else if (data.success && data.status === 'rejected') {
                     // FALLO. El pago fue rechazado.
                     clearInterval(interval);
                     navigate('/payment-failure');
                 }
-                // Si sigue 'pending', no hacemos nada y esperamos a la siguiente verificación.
+                // Si el estado sigue siendo 'pending_payment', no hacemos nada y el intervalo continuará.
                 
             } catch (error) {
                 console.error("Error verificando el estado del pago:", error);
-                // Opcional: manejar un error de red aquí
+                // Si hay un error de red, podríamos detener el polling para no sobrecargar
+                // clearInterval(interval);
+                // navigate('/payment-failure');
             }
-        }, 3000); // 3 segundos
+        }, 3000); // Verificamos cada 3 segundos
 
-        // Limpiamos el intervalo si el usuario navega a otra página
+        // Limpiamos el intervalo si el usuario navega a otra página para evitar fugas de memoria
         return () => clearInterval(interval);
 
-    } [purchaseId, navigate, verifySession];
+    }, [purchaseId, navigate, verifySession]); // El efecto depende de estas variables
 
     // Variante para la animación de los círculos pulsantes
     const pulseVariant = {
@@ -82,7 +80,6 @@ function PaymentPending() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.7, ease: "easeOut" }}
                     >
-                        {/* Animación Central */}
                         <div className="relative flex justify-center items-center h-40 w-40 mx-auto mb-8">
                             <motion.div variants={pulseVariant} initial="initial" animate="animate" className="absolute w-full h-full rounded-full bg-yellow-500/30" />
                             <motion.div variants={pulseVariant} initial="initial" animate="animate" style={{ animationDelay: '0.5s' }} className="absolute w-2/3 h-2/3 rounded-full bg-yellow-500/40" />
@@ -99,7 +96,6 @@ function PaymentPending() {
                             Por favor, no cierres ni actualices esta página.
                         </p>
                         
-                        {/* Barra de progreso indeterminada */}
                         <div className="relative w-full h-2 bg-gray-200 dark:bg-slate-700 rounded-full mt-10 overflow-hidden">
                             <motion.div 
                                 className="absolute top-0 left-0 h-full w-1/3 bg-yellow-500 dark:bg-yellow-400 rounded-full"
@@ -147,7 +143,6 @@ function PaymentPending() {
             </div>
         </div>
     );
+}
 
-
-// La exportación ahora coincide con el nombre de la función
 export default PaymentPending;
