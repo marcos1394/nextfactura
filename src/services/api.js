@@ -3,21 +3,50 @@ import axios from 'axios';
 // 1. CONFIGURACIÓN INICIAL DE AXIOS
 // =======================================================
 const api = axios.create({
-  // La URL base que apunta a tu Nginx reverse proxy.
   baseURL: '/api',
-  // ¡CRÍTICO! Esta opción le permite a axios enviar y recibir las cookies
-  // seguras (HttpOnly) que establece tu backend.
-  withCredentials: true,
+  withCredentials: true, // Permite que axios envíe y reciba cookies seguras.
 });
 
-// El interceptor de request que añadía el 'Authorization' header desde localStorage
-// se elimina. El navegador ahora maneja el envío de la cookie automáticamente.
 
-
-// 2. FUNCIONES DE LA API (Sin cambios en su lógica interna)
+// 2. INTERCEPTOR DE RESPUESTA (MANEJO AUTOMÁTICO DE SESIÓN EXPIRADA)
 // =======================================================
+api.interceptors.response.use(
+  // Si la respuesta es exitosa (status 2xx), simplemente la devuelve.
+  (response) => response,
+  
+  // Si la respuesta es un error, este código se ejecuta.
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // Verificamos si el error es un 401 por token expirado y que no sea ya un reintento.
+    if (error.response?.status === 401 && error.response.data.message === 'Token de acceso expirado.' && !originalRequest._retry) {
+      originalRequest._retry = true; // Marcamos la petición para evitar bucles infinitos
+      
+      console.log('[API Interceptor] Token de acceso expirado. Intentando refrescar...');
 
-// --- Funciones de Autenticación ---
+      try {
+        // Hacemos la llamada al endpoint de refresco. El navegador enviará la cookie 'refreshToken'.
+        await api.post('/auth/refresh-token');
+        
+        console.log('[API Interceptor] Token refrescado. Reintentando petición original...');
+        
+        // Reintentamos la petición original que había fallado.
+        return api(originalRequest);
+
+      } catch (refreshError) {
+        console.error("[API Interceptor] No se pudo refrescar el token. Sesión terminada.");
+        // Si el refresh token también falla, es momento de redirigir al login.
+        window.location.href = '/login'; 
+        return Promise.reject(refreshError);
+      }
+    }
+    
+    // Para cualquier otro tipo de error, simplemente lo propagamos.
+    return Promise.reject(error);
+  }
+);
+
+
 
 export const loginUser = async (email, password) => {
     try {
