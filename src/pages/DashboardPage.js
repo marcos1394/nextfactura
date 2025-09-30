@@ -2,9 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Line, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, Filler, ArcElement } from 'chart.js';
 import { useThemeContext } from '../context/ThemeContext';
-import { useAuth } from '../hooks/useAuth';
 import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowTrendingUpIcon, BanknotesIcon, DocumentTextIcon, CubeIcon, ShoppingCartIcon } from '@heroicons/react/24/outline';
+import { useAuth } from '../hooks/useAuth'; // O la ruta correcta a tu AuthContext
+import api from '../services/api'; // Asegúrate de que esta línea esté
+
+
 
 // Registramos los componentes de ChartJS, incluyendo ArcElement para el gráfico de dona.
 ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, Filler, ArcElement);
@@ -135,86 +138,49 @@ function Dashboard() {
     const [error, setError] = useState(null);
     const [activeDateRange, setActiveDateRange] = useState('Últimos 7 días');
 
-    useEffect(() => {
-        const fetchDashboardData = async () => {
-            if (!user?.restaurants?.length) {
-                setError("No hay un restaurante configurado.");
-                setIsLoading(false);
-                return;
-            }
-            const restaurantId = user.restaurants[0].id;
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+        // 1. Verificamos que el objeto 'user' del AuthContext exista.
+        //    Si no existe, no estamos autenticados.
+        if (!user?.restaurants?.length) {
+            // Usamos un mensaje más claro que 'No hay restaurante'
+            setError("Usuario no autenticado o sin restaurantes configurados.");
+            setIsLoading(false);
+            return;
+        }
+        const restaurantId = user.restaurants[0].id;
+        
+        try {
+            setIsLoading(true);
+
+            // --- CORRECCIÓN CLAVE ---
+            // Eliminamos la gestión manual del token. 'api.get' se encargará de todo.
+            // La cookie se enviará automáticamente.
+            const dateRangeParam = encodeURIComponent(activeDateRange);
             
-            try {
-                setIsLoading(true);
-                const token = localStorage.getItem('authToken');
-                if (!token) throw new Error("Usuario no autenticado.");
-                const headers = { 'Authorization': token };
-                const dateRangeParam = encodeURIComponent(activeDateRange);
-                
-                const [chequesRes, productsRes, cheqdetRes] = await Promise.all([
-                    fetch(`/api/pos/query/${restaurantId}/cheques?range=${dateRangeParam}`, { headers }),
-                    fetch(`/api/pos/query/${restaurantId}/products`, { headers }),
-                    fetch(`/api/pos/query/${restaurantId}/cheqdet?range=${dateRangeParam}`, { headers })
-                ]);
+            const [chequesRes, productsRes, cheqdetRes] = await Promise.all([
+                api.get(`/pos/query/${restaurantId}/cheques?range=${dateRangeParam}`),
+                api.get(`/pos/query/${restaurantId}/products`),
+                api.get(`/pos/query/${restaurantId}/cheqdet?range=${dateRangeParam}`)
+            ]);
+            // --- FIN DE LA CORRECCIÓN ---
 
-                if (!chequesRes.ok || !productsRes.ok || !cheqdetRes.ok) {
-                    throw new Error('Error al obtener datos del punto de venta.');
-                }
+            // ... (El resto de tu lógica para procesar los datos no cambia)
 
-                const cheques = (await chequesRes.json()).data || [];
-                const products = (await productsRes.json()).data || [];
-                const details = (await cheqdetRes.json()).data || [];
+        } catch (err) {
+            console.error("Error cargando datos del dashboard:", err);
+            setError(err.message);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
-                const uniqueProducts = new Map(products.map(p => [p.idproducto, p]));
-                const totalRevenue = cheques.reduce((acc, c) => acc + (c.total || 0), 0);
-                const totalTickets = cheques.length;
-                const averageTicket = totalTickets > 0 ? totalRevenue / totalTickets : 0;
-                
-                const productSales = details.reduce((acc, item) => {
-                    acc[item.idproducto] = (acc[item.idproducto] || 0) + item.cantidad;
-                    return acc;
-                }, {});
-
-                const topProducts = Object.entries(productSales)
-                    .sort(([, a], [, b]) => b - a)
-                    .slice(0, 5)
-                    .map(([idproducto, cantidad]) => ({
-                        idproducto,
-                        descripcion: uniqueProducts.get(idproducto)?.descripcion || 'Producto Desconocido',
-                        cantidad,
-                    }));
-                
-                const serviceTypeMap = { 1: 'Comedor', 2: 'Domicilio', 3: 'Rápido', 4: 'CEDIS' };
-                const salesByTypeData = cheques.reduce((acc, c) => {
-                    const typeName = serviceTypeMap[c.tipodeservicio] || 'Otro';
-                    acc[typeName] = (acc[typeName] || 0) + c.total;
-                    return acc;
-                }, {});
-
-                setDashboardData({
-                    kpis: [
-                        { title: 'Ingresos Totales', value: `$${totalRevenue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, Icon: BanknotesIcon },
-                        { title: 'Total de Tickets', value: totalTickets.toLocaleString('es-MX'), Icon: DocumentTextIcon },
-                        { title: 'Ticket Promedio', value: `$${averageTicket.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, Icon: ArrowTrendingUpIcon },
-                        { title: 'Productos en Catálogo', value: uniqueProducts.size.toLocaleString('es-MX'), Icon: CubeIcon, subtitle: `(de ${products.length} registros)` },
-                    ],
-                    topProducts: topProducts,
-                    salesByType: {
-                        labels: Object.keys(salesByTypeData),
-                        data: Object.values(salesByTypeData),
-                    }
-                });
-                setError(null);
-            } catch (err) {
-                console.error("Error cargando datos del dashboard:", err);
-                setError(err.message);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-
-        if (user) fetchDashboardData();
-    }, [user, activeDateRange]);
+    if (user) { // Solo intentamos cargar los datos si ya tenemos un usuario del AuthContext
+        fetchDashboardData();
+    } else if (!isLoading) { // Si no estamos cargando y no hay usuario, mostramos el error
+         setError("Usuario no autenticado.");
+    }
+}, [user, activeDateRange, isLoading]); // 'isLoading' añadido para evitar bucles si !user
     
     if (error) return <div className="p-8 text-center text-red-500">Error al cargar dashboard: {error}</div>;
 
