@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Line, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, Title, Tooltip, Legend, Filler, ArcElement } from 'chart.js';
 import { useThemeContext } from '../context/ThemeContext';
@@ -138,24 +138,18 @@ function Dashboard() {
     const [error, setError] = useState(null);
     const [activeDateRange, setActiveDateRange] = useState('Últimos 7 días');
 
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-        // 1. Verificamos que el objeto 'user' del AuthContext exista.
-        //    Si no existe, no estamos autenticados.
-        if (!user?.restaurants?.length) {
-            // Usamos un mensaje más claro que 'No hay restaurante'
-            setError("Usuario no autenticado o sin restaurantes configurados.");
+    // --- LÓGICA DE CARGA DE DATOS OPTIMIZADA ---
+    const fetchDashboardData = useCallback(async () => {
+        const restaurantId = user?.restaurants?.[0]?.id;
+        if (!restaurantId) {
+            setError("No hay un restaurante configurado.");
             setIsLoading(false);
             return;
         }
-        const restaurantId = user.restaurants[0].id;
         
         try {
             setIsLoading(true);
-
-            // --- CORRECCIÓN CLAVE ---
-            // Eliminamos la gestión manual del token. 'api.get' se encargará de todo.
-            // La cookie se enviará automáticamente.
+            setError(null);
             const dateRangeParam = encodeURIComponent(activeDateRange);
             
             const [chequesRes, productsRes, cheqdetRes] = await Promise.all([
@@ -163,26 +157,73 @@ function Dashboard() {
                 api.get(`/pos/query/${restaurantId}/products`),
                 api.get(`/pos/query/${restaurantId}/cheqdet?range=${dateRangeParam}`)
             ]);
-            // --- FIN DE LA CORRECCIÓN ---
 
-            // ... (El resto de tu lógica para procesar los datos no cambia)
+            if (!chequesRes.data.success || !productsRes.data.success || !cheqdetRes.data.success) {
+                throw new Error('Error al obtener los datos completos del punto de venta.');
+            }
 
+            const cheques = chequesRes.data.data || [];
+            const products = productsRes.data.data || [];
+            const details = cheqdetRes.data.data || [];
+
+            // --- INICIO DE LA LÓGICA DE PROCESAMIENTO DE DATOS ---
+            const uniqueProducts = new Map(products.map(p => [p.idproducto, p]));
+            const totalRevenue = cheques.reduce((acc, c) => acc + (c.total || 0), 0);
+            const totalTickets = cheques.length;
+            const averageTicket = totalTickets > 0 ? totalRevenue / totalTickets : 0;
+            
+            const productSales = details.reduce((acc, item) => {
+                acc[item.idproducto] = (acc[item.idproducto] || 0) + item.cantidad;
+                return acc;
+            }, {});
+
+            const topProducts = Object.entries(productSales)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 5)
+                .map(([idproducto, cantidad]) => ({
+                    idproducto,
+                    descripcion: uniqueProducts.get(idproducto)?.descripcion || 'Producto Desconocido',
+                    cantidad,
+                }));
+            
+            const serviceTypeMap = { 1: 'Comedor', 2: 'Domicilio', 3: 'Rápido', 4: 'CEDIS' };
+            const salesByTypeData = cheques.reduce((acc, c) => {
+                const typeName = serviceTypeMap[c.tipodeservicio] || 'Otro';
+                acc[typeName] = (acc[typeName] || 0) + c.total;
+                return acc;
+            }, {});
+
+            setDashboardData({
+                kpis: [
+                    { title: 'Ingresos Totales', value: `$${totalRevenue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, Icon: BanknotesIcon },
+                    { title: 'Total de Tickets', value: totalTickets.toLocaleString('es-MX'), Icon: DocumentTextIcon },
+                    { title: 'Ticket Promedio', value: `$${averageTicket.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, Icon: ArrowTrendingUpIcon },
+                    { title: 'Productos en Catálogo', value: uniqueProducts.size.toLocaleString('es-MX'), Icon: CubeIcon },
+                ],
+                topProducts: topProducts,
+                salesByType: {
+                    labels: Object.keys(salesByTypeData),
+                    data: Object.values(salesByTypeData),
+                }
+            });
+            // --- FIN DE LA LÓGICA DE PROCESAMIENTO ---
+            
         } catch (err) {
             console.error("Error cargando datos del dashboard:", err);
             setError(err.message);
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [user, activeDateRange]); // La función se recrea solo si 'user' o 'activeDateRange' cambian
 
-    if (user) { // Solo intentamos cargar los datos si ya tenemos un usuario del AuthContext
-        fetchDashboardData();
-    } else if (!isLoading) { // Si no estamos cargando y no hay usuario, mostramos el error
-         setError("Usuario no autenticado.");
-    }
-}, [user, activeDateRange, isLoading]); // 'isLoading' añadido para evitar bucles si !user
+    useEffect(() => {
+        if (user) {
+            fetchDashboardData();
+        }
+    }, [user, fetchDashboardData]); // El efecto se dispara cuando 'fetchDashboardData' (y por ende sus dependencias) cambia
     
     if (error) return <div className="p-8 text-center text-red-500">Error al cargar dashboard: {error}</div>;
+
 
     return (
         <main className={`min-h-screen w-full p-4 sm:p-6 lg:p-8 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
