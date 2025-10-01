@@ -138,83 +138,88 @@ function Dashboard() {
     const [error, setError] = useState(null);
     const [activeDateRange, setActiveDateRange] = useState('Últimos 7 días');
 
-    // --- LÓGICA DE CARGA DE DATOS OPTIMIZADA ---
-    const fetchDashboardData = useCallback(async () => {
-        const restaurantId = user?.restaurants?.[0]?.id;
-        if (!restaurantId) {
-            setError("No hay un restaurante configurado.");
-            setIsLoading(false);
-            return;
-        }
+   const fetchDashboardData = useCallback(async () => {
+    const restaurantId = user?.restaurants?.[0]?.id;
+    if (!restaurantId) {
+        setError("No hay un restaurante configurado para obtener datos.");
+        setIsLoading(false);
+        return;
+    }
+    
+    try {
+        setIsLoading(true);
+        setError(null);
+        const dateRangeParam = encodeURIComponent(activeDateRange);
         
-        try {
-            setIsLoading(true);
-            setError(null);
-            const dateRangeParam = encodeURIComponent(activeDateRange);
-            
-            const [chequesRes, productsRes, cheqdetRes] = await Promise.all([
-                api.get(`/pos/query/${restaurantId}/cheques?range=${dateRangeParam}`),
-                api.get(`/pos/query/${restaurantId}/products`),
-                api.get(`/pos/query/${restaurantId}/cheqdet?range=${dateRangeParam}`)
-            ]);
+        // Hacemos las llamadas a la API en paralelo
+        const [chequesRes, productsRes, cheqdetRes] = await Promise.all([
+            api.get(`/pos/query/${restaurantId}/cheques?range=${dateRangeParam}`),
+            api.get(`/pos/query/${restaurantId}/products`),
+            api.get(`/pos/query/${restaurantId}/cheqdet?range=${dateRangeParam}`)
+        ]);
 
-            if (!chequesRes.data.success || !productsRes.data.success || !cheqdetRes.data.success) {
-                throw new Error('Error al obtener los datos completos del punto de venta.');
-            }
-
-            const cheques = chequesRes.data.data || [];
-            const products = productsRes.data.data || [];
-            const details = cheqdetRes.data.data || [];
-
-            // --- INICIO DE LA LÓGICA DE PROCESAMIENTO DE DATOS ---
-            const uniqueProducts = new Map(products.map(p => [p.idproducto, p]));
-            const totalRevenue = cheques.reduce((acc, c) => acc + (c.total || 0), 0);
-            const totalTickets = cheques.length;
-            const averageTicket = totalTickets > 0 ? totalRevenue / totalTickets : 0;
-            
-            const productSales = details.reduce((acc, item) => {
-                acc[item.idproducto] = (acc[item.idproducto] || 0) + item.cantidad;
-                return acc;
-            }, {});
-
-            const topProducts = Object.entries(productSales)
-                .sort(([, a], [, b]) => b - a)
-                .slice(0, 5)
-                .map(([idproducto, cantidad]) => ({
-                    idproducto,
-                    descripcion: uniqueProducts.get(idproducto)?.descripcion || 'Producto Desconocido',
-                    cantidad,
-                }));
-            
-            const serviceTypeMap = { 1: 'Comedor', 2: 'Domicilio', 3: 'Rápido', 4: 'CEDIS' };
-            const salesByTypeData = cheques.reduce((acc, c) => {
-                const typeName = serviceTypeMap[c.tipodeservicio] || 'Otro';
-                acc[typeName] = (acc[typeName] || 0) + c.total;
-                return acc;
-            }, {});
-
-            setDashboardData({
-                kpis: [
-                    { title: 'Ingresos Totales', value: `$${totalRevenue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, Icon: BanknotesIcon },
-                    { title: 'Total de Tickets', value: totalTickets.toLocaleString('es-MX'), Icon: DocumentTextIcon },
-                    { title: 'Ticket Promedio', value: `$${averageTicket.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, Icon: ArrowTrendingUpIcon },
-                    { title: 'Productos en Catálogo', value: uniqueProducts.size.toLocaleString('es-MX'), Icon: CubeIcon },
-                ],
-                topProducts: topProducts,
-                salesByType: {
-                    labels: Object.keys(salesByTypeData),
-                    data: Object.values(salesByTypeData),
-                }
-            });
-            // --- FIN DE LA LÓGICA DE PROCESAMIENTO ---
-            
-        } catch (err) {
-            console.error("Error cargando datos del dashboard:", err);
-            setError(err.message);
-        } finally {
-            setIsLoading(false);
+        if (!chequesRes.data.success || !productsRes.data.success || !cheqdetRes.data.success) {
+            throw new Error('Error al obtener los datos completos del punto de venta.');
         }
-    }, [user, activeDateRange]); // La función se recrea solo si 'user' o 'activeDateRange' cambian
+
+        const cheques = chequesRes.data.data || [];
+        const products = productsRes.data.data || [];
+        const details = cheqdetRes.data.data || [];
+
+        // --- INICIO DE LA LÓGICA DE PROCESAMIENTO DE DATOS ---
+
+        // CORRECCIÓN: Limpiamos los espacios en blanco de los IDs al crear el "directorio"
+        const uniqueProducts = new Map(products.map(p => [p.idproducto.trim(), p]));
+        
+        const totalRevenue = cheques.reduce((acc, c) => acc + (c.total || 0), 0);
+        const totalTickets = cheques.length;
+        const averageTicket = totalTickets > 0 ? totalRevenue / totalTickets : 0;
+        
+        const productSales = details.reduce((acc, item) => {
+            const cleanId = item.idproducto.trim(); // Limpiamos el ID aquí también
+            acc[cleanId] = (acc[cleanId] || 0) + item.cantidad;
+            return acc;
+        }, {});
+
+        const topProducts = Object.entries(productSales)
+            .sort(([, a], [, b]) => b - a)
+            .slice(0, 5)
+            .map(([idproducto, cantidad]) => ({
+                idproducto,
+                // Usamos el ID limpio para la búsqueda y mostramos un fallback mejorado
+                descripcion: uniqueProducts.get(idproducto)?.descripcion || `ID: ${idproducto} (Eliminado)`,
+                cantidad,
+            }));
+        
+        const serviceTypeMap = { 1: 'Comedor', 2: 'Domicilio', 3: 'Rápido', 4: 'CEDIS' };
+        const salesByTypeData = cheques.reduce((acc, c) => {
+            const typeName = serviceTypeMap[c.tipodeservicio] || 'Otro';
+            acc[typeName] = (acc[typeName] || 0) + c.total;
+            return acc;
+        }, {});
+
+        setDashboardData({
+            kpis: [
+                { title: 'Ingresos Totales', value: `$${totalRevenue.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, Icon: BanknotesIcon },
+                { title: 'Total de Tickets', value: totalTickets.toLocaleString('es-MX'), Icon: DocumentTextIcon },
+                { title: 'Ticket Promedio', value: `$${averageTicket.toLocaleString('es-MX', { minimumFractionDigits: 2 })}`, Icon: ArrowTrendingUpIcon },
+                { title: 'Productos en Catálogo', value: uniqueProducts.size.toLocaleString('es-MX'), Icon: CubeIcon },
+            ],
+            topProducts: topProducts,
+            salesByType: {
+                labels: Object.keys(salesByTypeData),
+                data: Object.values(salesByTypeData),
+            }
+        });
+        // --- FIN DE LA LÓGICA DE PROCESAMIENTO ---
+        
+    } catch (err) {
+        console.error("Error cargando datos del dashboard:", err);
+        setError(err.message);
+    } finally {
+        setIsLoading(false);
+    }
+}, [user, activeDateRange]); // La función se recrea solo si 'user' o 'activeDateRange' cambian
 
     useEffect(() => {
         if (user) {
