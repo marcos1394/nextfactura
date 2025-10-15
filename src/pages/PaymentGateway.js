@@ -4,7 +4,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
 import { useAuth } from '../hooks/useAuth';
-import { ShieldCheckIcon, SparklesIcon, ArrowRightIcon, LockClosedIcon, CheckCircleIcon, CreditCardIcon, AwardIcon, UsersIcon, ArrowTrendingUpIcon, BoltIcon } from '@heroicons/react/24/solid';
+import { ShieldCheckIcon, SparklesIcon, ArrowRightIcon, LockClosedIcon, CheckCircleIcon, CreditCardIcon, UsersIcon, ArrowTrendingUpIcon, BoltIcon, TrophyIcon } from '@heroicons/react/24/solid';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 
@@ -216,7 +216,7 @@ function PaymentGateway() {
 
                             {isAnnual && (
                                 <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                    <AwardIcon className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                                    <TrophyIcon className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                                     <p className="text-xs text-blue-700 dark:text-blue-300">
                                         <strong>¡Felicidades!</strong> Estás ahorrando {discountFormatted} MXN al año
                                     </p>
