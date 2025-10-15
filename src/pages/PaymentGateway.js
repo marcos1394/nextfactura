@@ -1,11 +1,17 @@
+// src/pages/PaymentGateway.js
 import React, { useState } from 'react';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Shield, Sparkles, ArrowRight, Lock, CheckCircle, CreditCard, Clock, Award, TrendingUp, Users, Zap } from 'lucide-react';
+import { useThemeContext } from '../context/ThemeContext';
+import { useAuth } from '../hooks/useAuth';
+import { ShieldCheckIcon, SparklesIcon, ArrowRightIcon, LockClosedIcon, CheckCircleIcon, CreditCardIcon, ClockIcon, AwardIcon, TrendingUpIcon, UsersIcon, ZapIcon, StarIcon } from '@heroicons/react/24/solid';
+import api from '../services/api';
+import { toast } from 'react-toastify';
 
 const BenefitListItem = ({ children }) => (
     <li className="flex items-start gap-3">
         <div className="flex-shrink-0 w-5 h-5 rounded-full bg-yellow-400/20 flex items-center justify-center mt-0.5">
-            <Sparkles className="w-3 h-3 text-yellow-300" />
+            <SparklesIcon className="w-3 h-3 text-yellow-300" />
         </div>
         <span className="text-slate-300">{children}</span>
     </li>
@@ -61,36 +67,56 @@ const Step = ({ number, label, isActive }) => (
 );
 
 function PaymentGateway() {
-    const [darkMode] = useState(false);
+    const location = useLocation();
+    const navigate = useNavigate();
+    const { darkMode } = useThemeContext();
+    const { user } = useAuth();
     const [isProcessing, setIsProcessing] = useState(false);
     const [showFeatures, setShowFeatures] = useState(true);
 
-    // Datos de ejemplo del plan seleccionado
-    const selectedPlan = {
-        product: 'Profesional',
-        name: 'Plan Anual',
-        price: 6120,
-        period: 'annually',
-        features: [
-            { text: 'Panel de control intuitivo' },
-            { text: 'Hasta 5 usuarios' },
-            { text: 'Reportes avanzados' },
-            { text: 'Soporte prioritario' },
-            { text: '150 Timbres fiscales mensuales' }
-        ]
-    };
+    // Los datos del plan ahora vienen exclusivamente de la página anterior
+    const { selectedPlan } = location.state || {};
 
+    // Redirección de seguridad si no hay un plan seleccionado
+    if (!selectedPlan) {
+        navigate('/plans');
+        return null;
+    }
+    
     const handlePayment = async () => {
-        setIsProcessing(true);
-        // Simulación de procesamiento
-        setTimeout(() => {
-            console.log('Procesando pago...');
-        }, 2000);
-    };
+        if (!selectedPlan?.id || !user?.profile?.id) {
+            toast.error('Error: No se ha seleccionado un plan o usuario válido.');
+            navigate('/plans');
+            return;
+        }
 
-    // Cálculos
+        setIsProcessing(true);
+
+        try {
+            const response = await api.post('/payments/create-preference', {
+                planId: selectedPlan.id,
+                billingCycle: selectedPlan.period,
+                userId: user.profile.id,
+                origin: 'webapp_onboarding'
+            });
+
+            if (response.data.success && response.data.init_point) {
+                window.location.href = response.data.init_point;
+            } else {
+                throw new Error(response.data.message || 'No se pudo obtener la URL de pago.');
+            }
+
+        } catch (error) {
+            const errorMessage = error.response?.data?.message || 'Error al iniciar el proceso de pago. Inténtalo de nuevo.';
+            toast.error(errorMessage);
+            setIsProcessing(false);
+        }
+    };
+    
+    // Cálculos de precios (asumiendo que vienen en 'selectedPlan')
     const priceFormatted = (selectedPlan.price || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
     const isAnnual = selectedPlan.period === 'annually';
+    // Mostramos descuento solo si es anual
     const subtotal = isAnnual ? (selectedPlan.price / 0.85) : selectedPlan.price; 
     const discount = isAnnual ? (subtotal - selectedPlan.price) : 0;
     
@@ -99,17 +125,17 @@ function PaymentGateway() {
 
     const highlightFeatures = [
         {
-            icon: TrendingUp,
+            icon: TrendingUpIcon,
             title: "Crece sin límites",
             description: "Escala tu negocio con herramientas empresariales"
         },
         {
-            icon: Users,
+            icon: UsersIcon,
             title: "Colaboración en equipo",
             description: "Trabaja junto a tu equipo sin fricciones"
         },
         {
-            icon: Zap,
+            icon: ZapIcon,
             title: "Facturación instantánea",
             description: "Emite facturas en segundos, no en horas"
         }
@@ -135,13 +161,10 @@ function PaymentGateway() {
                         </div>
 
                         <div className="mb-6">
-                            <button 
-                                onClick={() => window.history.back()}
-                                className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 group"
-                            >
-                                <ArrowRight className="w-4 h-4 rotate-180 group-hover:-translate-x-1 transition-transform" />
+                            <Link to="/plans" className="text-sm font-medium text-blue-600 dark:text-blue-400 hover:underline inline-flex items-center gap-1 group">
+                                <ArrowRightIcon className="w-4 h-4 rotate-180 group-hover:-translate-x-1 transition-transform" />
                                 Volver a Planes
-                            </button>
+                            </Link>
                         </div>
 
                         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-gray-900 dark:text-white mb-2">
@@ -193,7 +216,7 @@ function PaymentGateway() {
 
                             {isAnnual && (
                                 <div className="flex items-center gap-2 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
-                                    <Award className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
+                                    <AwardIcon className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0" />
                                     <p className="text-xs text-blue-700 dark:text-blue-300">
                                         <strong>¡Felicidades!</strong> Estás ahorrando {discountFormatted} MXN al año
                                     </p>
@@ -204,7 +227,7 @@ function PaymentGateway() {
                         {/* Método de Pago Mejorado */}
                         <div className="mt-8">
                              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-2">
-                                <CreditCard className="w-4 h-4" />
+                                <CreditCardIcon className="w-4 h-4" />
                                 Método de pago seguro
                             </h3>
                              <motion.div 
@@ -213,7 +236,7 @@ function PaymentGateway() {
                              >
                                  <div className="flex items-center gap-2">
                                     <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center shadow-lg">
-                                        <CreditCard className="w-6 h-6 text-white" />
+                                        <CreditCardIcon className="w-6 h-6 text-white" />
                                     </div>
                                     <div className="text-left">
                                         <div className="font-bold text-lg text-gray-900 dark:text-white leading-none">
@@ -226,23 +249,23 @@ function PaymentGateway() {
                                  </div>
                                  <div className="flex items-center gap-2 text-xs text-gray-500 dark:text-slate-400">
                                     <div className="flex items-center gap-1 px-2 py-1 rounded bg-gray-100 dark:bg-slate-700">
-                                        <CreditCard className="w-3 h-3" />
+                                        <CreditCardIcon className="w-3 h-3" />
                                         <span>Tarjetas</span>
                                     </div>
                                     <div className="flex items-center gap-1 px-2 py-1 rounded bg-gray-100 dark:bg-slate-700">
-                                        <CheckCircle className="w-3 h-3" />
+                                        <CheckCircleIcon className="w-3 h-3" />
                                         <span>Débito</span>
                                     </div>
                                     <div className="flex items-center gap-1 px-2 py-1 rounded bg-gray-100 dark:bg-slate-700">
-                                        <Shield className="w-3 h-3" />
+                                        <ShieldCheckIcon className="w-3 h-3" />
                                         <span>Seguro</span>
                                     </div>
                                  </div>
                              </motion.div>
                              <div className="mt-3 flex flex-wrap gap-3">
-                                <SecurityBadge icon={Shield} text="Encriptación SSL" />
-                                <SecurityBadge icon={CheckCircle} text="Pago Verificado" />
-                                <SecurityBadge icon={Lock} text="Datos Protegidos" />
+                                <SecurityBadge icon={ShieldCheckIcon} text="Encriptación SSL" />
+                                <SecurityBadge icon={CheckCircleIcon} text="Pago Verificado" />
+                                <SecurityBadge icon={LockClosedIcon} text="Datos Protegidos" />
                              </div>
                         </div>
 
@@ -263,16 +286,16 @@ function PaymentGateway() {
                                     </>
                                 ) : (
                                     <>
-                                        <Lock className="w-5 h-5" />
-                                        <span>Ir a Pago Seguro</span>
-                                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                                        <LockClosedIcon className="w-5 h-5" />
+                                        <span>Continuar a Pago Seguro</span>
+                                        <ArrowRightIcon className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                                     </>
                                 )}
                             </motion.button>
                             
                             <div className="mt-4 space-y-2">
                                 <p className="flex items-center justify-center gap-2 text-xs text-gray-500 dark:text-slate-400">
-                                    <Lock className="w-4 h-4 text-gray-400"/> 
+                                    <LockClosedIcon className="w-4 h-4 text-gray-400"/> 
                                     Transacción 100% segura y encriptada
                                 </p>
                                 <p className="text-center text-xs text-gray-500 dark:text-slate-400">
@@ -290,7 +313,7 @@ function PaymentGateway() {
                             transition={{ delay: 0.5 }}
                         >
                             <div className="flex items-start gap-3">
-                                <Shield className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
+                                <ShieldCheckIcon className="w-5 h-5 text-green-600 dark:text-green-400 flex-shrink-0 mt-0.5" />
                                 <div>
                                     <h4 className="font-semibold text-sm text-green-800 dark:text-green-300 mb-1">
                                         Garantía de 30 días
@@ -327,7 +350,7 @@ function PaymentGateway() {
                         >
                             {/* Badge superior */}
                             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-500/20 border border-blue-400/30 backdrop-blur-sm mb-6">
-                                <Sparkles className="w-4 h-4 text-blue-300" />
+                                <SparklesIcon className="w-4 h-4 text-blue-300" />
                                 <span className="text-sm font-semibold text-blue-100">Plan {selectedPlan.product}</span>
                             </div>
 
@@ -368,7 +391,7 @@ function PaymentGateway() {
                                 className="text-sm text-blue-400 hover:text-blue-300 font-medium mb-4 flex items-center gap-2"
                             >
                                 {showFeatures ? 'Ocultar' : 'Ver'} características destacadas
-                                <ArrowRight className={`w-4 h-4 transition-transform ${showFeatures ? 'rotate-90' : ''}`} />
+                                <ArrowRightIcon className={`w-4 h-4 transition-transform ${showFeatures ? 'rotate-90' : ''}`} />
                             </button>
 
                             {/* Características destacadas animadas */}
