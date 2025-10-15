@@ -1,13 +1,12 @@
-// src/pages/PaymentGateway.js
 import React, { useState } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
+import { useAuth } from '../hooks/useAuth'; // Para obtener el ID del usuario
 import { ShieldCheckIcon, SparklesIcon, ArrowRightIcon, LockClosedIcon } from '@heroicons/react/24/solid';
-import api from '../services/api'; // <-- NUEVO: Importamos nuestro cliente API
-import { toast } from 'react-toastify'; // <-- NUEVO: Para notificaciones
+import api from '../services/api';
+import { toast } from 'react-toastify';
 
-// Un componente para la lista de beneficios en el panel derecho
 const BenefitListItem = ({ children }) => (
     <li className="flex items-start gap-3">
         <SparklesIcon className="w-5 h-5 flex-shrink-0 text-yellow-300 mt-0.5" />
@@ -15,43 +14,25 @@ const BenefitListItem = ({ children }) => (
     </li>
 );
 
-/**
- * PaymentGateway - Rediseñado como una experiencia de checkout segura y de alta confianza.
- * * Estrategia de UX/UI:
- * 1.  Resumen de Orden Claro: El panel izquierdo presenta un desglose transparente del costo, similar
- * a las mejores prácticas de e-commerce, lo que elimina la ambigüedad y genera confianza.
- * 2.  Refuerzo de Valor y Seguridad: El panel derecho está dedicado a combatir la duda de último minuto.
- * Recuerda al usuario los beneficios clave que está adquiriendo y muestra insignias de seguridad explícitas.
- * 3.  Gestión de Expectativas Clara: Se muestra prominentemente el logo de Mercado Pago, informando al
- * usuario exactamente cómo y dónde se procesará su pago, eliminando sorpresas.
- * 4.  Diseño Consistente y Profesional: El layout de dos paneles y la estética cuidada mantienen la
- * coherencia de la marca, asegurando al usuario que está en un entorno seguro y profesional.
- */
 function PaymentGateway() {
     const location = useLocation();
     const navigate = useNavigate();
     const { darkMode } = useThemeContext();
+    const { user } = useAuth(); // Obtenemos el usuario autenticado
     const [isProcessing, setIsProcessing] = useState(false);
 
-    // Si no hay estado de location, usamos un mock para poder renderizar y diseñar la página.
-    const { selectedPlan } = location.state || {
-        selectedPlan: {
-            product: 'Paquete Completo',
-            name: 'Anual',
-            price: 7500.00,
-            features: [
-                'Facturación ilimitada',
-                'Análisis y reportes avanzados',
-                'Gestión de múltiples sucursales',
-                'Soporte Premium 24/7'
-            ]
-        }
-    };
+    // Los datos del plan ahora vienen exclusivamente de la página anterior
+    const { selectedPlan } = location.state || {};
 
-    // --- MANEJADOR DE PAGO REAL ---
+    // Redirección de seguridad si no hay un plan seleccionado
+    if (!selectedPlan) {
+        navigate('/plans');
+        return null;
+    }
+    
     const handlePayment = async () => {
-        if (!selectedPlan?.id) { // Verificamos que tengamos un plan con ID
-            toast.error('Error: No se ha seleccionado ningún plan válido.');
+        if (!selectedPlan?.planId || !user?.profile?.id) {
+            toast.error('Error: No se ha seleccionado un plan o usuario válido.');
             navigate('/plans');
             return;
         }
@@ -59,20 +40,14 @@ function PaymentGateway() {
         setIsProcessing(true);
 
         try {
-            console.log('[PaymentGateway] Creando preferencia de pago para el plan:', selectedPlan.id);
-            
-            // 1. Llamamos a nuestro backend para crear la preferencia de pago
             const response = await api.post('/payments/create-preference', {
-                planId: selectedPlan.id,
-                origin: 'webapp_onboarding' // O cualquier otro identificador que quieras
-
-                // Aquí podrías enviar más datos si tu backend los necesita
+                planId: selectedPlan.planId,
+                billingCycle: selectedPlan.period,
+                userId: user.profile.id, // Enviamos el ID del usuario
+                origin: 'webapp_onboarding'
             });
 
-           // --- CORRECCIÓN CLAVE ---
-            // Ahora buscamos 'init_point' en la respuesta, que es lo que devuelve tu backend.
             if (response.data.success && response.data.init_point) {
-                console.log('[PaymentGateway] Redirigiendo a Mercado Pago:', response.data.init_point);
                 window.location.href = response.data.init_point;
             } else {
                 throw new Error(response.data.message || 'No se pudo obtener la URL de pago.');
@@ -81,24 +56,22 @@ function PaymentGateway() {
         } catch (error) {
             const errorMessage = error.response?.data?.message || 'Error al iniciar el proceso de pago. Inténtalo de nuevo.';
             toast.error(errorMessage);
-            console.error('[PaymentGateway] Error:', error);
-            setIsProcessing(false); // Detenemos el estado de carga si hay un error
+            setIsProcessing(false);
         }
     };
-
-    if (!selectedPlan) {
-        // Redirección si se llega a esta página sin datos
-        navigate('/plans');
-        return null;
-    }
     
-    const priceFormatted = selectedPlan.price.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
-    const discountFormatted = (selectedPlan.price * 0.15).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
-    const subtotalFormatted = (selectedPlan.price + selectedPlan.price * 0.15).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
-
+    // Cálculos de precios (asumiendo que vienen en 'selectedPlan')
+    const priceFormatted = (selectedPlan.price || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+    const isAnnual = selectedPlan.period === 'annually';
+    // Mostramos descuento solo si es anual
+    const subtotal = isAnnual ? (selectedPlan.price / 0.85) : selectedPlan.price; 
+    const discount = isAnnual ? (subtotal - selectedPlan.price) : 0;
+    
+    const subtotalFormatted = subtotal.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
+    const discountFormatted = discount.toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
 
     return (
-        <div className={`min-h-screen font-sans ${darkMode ? 'dark bg-slate-900' : 'bg-gray-50'}`}>
+        <div className={`min-h-screen font-sans ${darkMode ? 'dark bg-slate-900' : 'bg-white'}`}>
             <div className="grid lg:grid-cols-2 min-h-screen">
                 
                 {/* --- Panel Izquierdo: Resumen de Orden y Pago --- */}
@@ -124,10 +97,12 @@ function PaymentGateway() {
                                     <span className="text-gray-600 dark:text-gray-400">Plan {selectedPlan.product} ({selectedPlan.name})</span>
                                     <span className="font-medium text-gray-800 dark:text-gray-200">{subtotalFormatted}</span>
                                 </div>
-                                <div className="flex justify-between text-green-600 dark:text-green-400">
-                                    <span>Descuento Anual (15%)</span>
-                                    <span>-{discountFormatted}</span>
-                                </div>
+                                {isAnnual && (
+                                    <div className="flex justify-between text-green-600 dark:text-green-400">
+                                        <span>Descuento Anual (Aprox. 15%)</span>
+                                        <span>-{discountFormatted}</span>
+                                    </div>
+                                )}
                                 <div className="flex justify-between text-lg font-bold border-t border-gray-200 dark:border-slate-700 pt-3 text-gray-900 dark:text-white">
                                     <span>Total</span>
                                     <span>{priceFormatted}</span>
@@ -139,7 +114,7 @@ function PaymentGateway() {
                         <div className="mt-8">
                              <h3 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-2">Pagar de forma segura con:</h3>
                              <div className="p-4 border border-gray-300 dark:border-slate-700 rounded-lg flex justify-center items-center bg-gray-50 dark:bg-slate-800">
-                                <img src="https://logolook.net/wp-content/uploads/2021/07/Mercado-Pago-Logo.png" alt="Mercado Pago" className="h-8"/>
+                                 <img src="https://logolook.net/wp-content/uploads/2021/07/Mercado-Pago-Logo.png" alt="Mercado Pago" className="h-8"/>
                              </div>
                         </div>
 
@@ -150,10 +125,7 @@ function PaymentGateway() {
                                 className="w-full py-4 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all duration-300 transform hover:-translate-y-1 disabled:bg-gray-400 disabled:cursor-not-allowed"
                             >
                                 {isProcessing ? (
-                                    <>
-                                        <svg className="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                                        Procesando...
-                                    </>
+                                    'Procesando...'
                                 ) : (
                                     <>
                                         Continuar a Pago Seguro <ArrowRightIcon className="w-5 h-5" />
@@ -183,13 +155,8 @@ function PaymentGateway() {
                                 Al activar tu plan <strong>{selectedPlan.product}</strong>, desbloquearás:
                             </p>
                             <ul className="mt-6 space-y-3 text-sm">
-                                {selectedPlan.features.map(feature => <BenefitListItem key={feature}>{feature}</BenefitListItem>)}
+                                {Array.isArray(selectedPlan.features) && selectedPlan.features.map(feature => <BenefitListItem key={feature.text}>{feature.text}</BenefitListItem>)}
                             </ul>
-
-                            <div className="mt-12 p-4 border border-slate-700 rounded-lg bg-slate-900/50">
-                                <p className="text-sm italic text-slate-300">"Desde que usamos NextManager, la administración es un 80% más rápida. Nos enfocamos en el servicio, no en el papeleo."</p>
-                                <p className="text-right mt-2 text-xs font-semibold text-white">- Dueño, SaborMX</p>
-                            </div>
                         </div>
                     </div>
                 </div>

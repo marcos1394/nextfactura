@@ -110,95 +110,111 @@ const handlePlanSelect = (plan) => {
     navigate('/payment', { state: { selectedPlan: selectedOption } });
 };
     return (
-        <div className={`min-h-screen ${darkMode ? 'bg-slate-900 text-white' : 'bg-gray-50 text-black'} py-16 sm:py-24 px-4 font-sans`}>
-            <div className="container mx-auto max-w-7xl">
-                {/* --- Encabezado y Toggle --- */}
-                <div className="text-center mb-12">
-                    <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-                        Precios transparentes, sin sorpresas.
-                    </h1>
-                    <p className="mt-4 text-lg text-gray-600 dark:text-slate-400 max-w-2xl mx-auto">
-                        Elige el plan que se adapte al ritmo de tu negocio. Escala cuando lo necesites.
-                    </p>
-                    <div className="mt-8">
-                        <BillingToggle billingCycle={billingCycle} setBillingCycle={setBillingCycle} />
-                    </div>
+    <div className={`min-h-screen ${darkMode ? 'bg-slate-900 text-white' : 'bg-gray-50 text-black'} py-16 sm:py-24 px-4 font-sans`}>
+        <div className="container mx-auto max-w-7xl">
+            {/* --- Encabezado y Toggle --- */}
+            <div className="text-center mb-12">
+                <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                    Precios transparentes, sin sorpresas.
+                </h1>
+                <p className="mt-4 text-lg text-gray-600 dark:text-slate-400 max-w-2xl mx-auto">
+                    Elige el plan que se adapte al ritmo de tu negocio. Escala cuando lo necesites.
+                </p>
+                <div className="mt-8">
+                    <BillingToggle billingCycle={billingCycle} setBillingCycle={setBillingCycle} />
                 </div>
-                {isLoading && <p className="text-center">Cargando planes...</p>}
-{error && <p className="text-center text-red-500">{error}</p>}
-{!isLoading && !error && (
-    <div className="grid lg:grid-cols-3 gap-8 items-start">
-        {plans.map((plan) => (
-            <motion.div
-                key={plan.id}
-                className={`w-full rounded-2xl p-8 border transition-all duration-300 ${
-                    plan.isHighlighted
-                        ? 'border-2 border-blue-500 shadow-2xl bg-white dark:bg-slate-800'
-                        : 'border-gray-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/30'
-                }`}
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: plan.isHighlighted ? 0 : 0.1 }}
-            >
-                {plan.isHighlighted && (
-                    <div className="text-center mb-4">
-                        <span className="inline-block bg-blue-500 text-white text-xs font-semibold px-3 py-1 rounded-full">{plan.tagline || 'MÁS POPULAR'}</span>
-                    </div>
-                )}
-                <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white">{plan.name}</h2>
-                <p className="text-sm text-center text-gray-500 dark:text-slate-400 mt-2 h-10">{plan.description}</p>
-                
-                <div className="text-center my-8">
-                    <span className="text-5xl font-extrabold text-gray-900 dark:text-white">
-                        ${(plan[billingCycle === 'annually' ? 'price_annually' : 'price_monthly'] / (billingCycle === 'annually' ? 12 : 1)).toFixed(0)}
-                    </span>
-                    <span className="text-lg text-gray-500 dark:text-slate-400">/mes</span>
-                    {billingCycle === 'annually' && <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">Facturado anualmente por ${plan.price_annually}</p>}
+            </div>
+
+            {/* --- Renderizado Condicional --- */}
+            {isLoading && <p className="text-center">Cargando planes...</p>}
+            {error && <p className="text-center text-red-500">{error}</p>}
+            
+            {!isLoading && !error && (
+                <div className="grid lg:grid-cols-3 gap-8 items-start">
+                    {plans.map((plan) => (
+                        <motion.div
+                            key={plan.id}
+                            className={`w-full rounded-2xl p-8 border transition-all duration-300 ${
+                                plan.isHighlighted
+                                    ? 'border-2 border-blue-500 shadow-2xl bg-white dark:bg-slate-800'
+                                    : 'border-gray-200 dark:border-slate-700 bg-white/50 dark:bg-slate-800/30'
+                            }`}
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: plan.isHighlighted ? 0 : 0.1 }}
+                        >
+                            {plan.isHighlighted && (
+                                <div className="text-center mb-4">
+                                    <span className="inline-block bg-blue-500 text-white text-xs font-semibold px-3 py-1 rounded-full">{plan.tagline || 'MÁS POPULAR'}</span>
+                                </div>
+                            )}
+                            <h2 className="text-2xl font-bold text-center text-gray-900 dark:text-white">{plan.name}</h2>
+                            <p className="text-sm text-center text-gray-500 dark:text-slate-400 mt-2 h-10">{plan.description}</p>
+                            
+                            {/* --- SECCIÓN DE PRECIOS CORREGIDA --- */}
+                            <div className="text-center my-8">
+                                <span className="text-5xl font-extrabold text-gray-900 dark:text-white">
+                                    ${(billingCycle === 'annually' 
+                                        ? plan.price_annually / 12 
+                                        : plan.price_monthly
+                                      ).toFixed(0)}
+                                </span>
+                                <span className="text-lg text-gray-500 dark:text-slate-400">/mes</span>
+                                {billingCycle === 'annually' && (
+                                    <p className="text-xs text-gray-500 dark:text-slate-400 mt-1">
+                                        Facturado anualmente por ${plan.price_annually.toLocaleString('es-MX')}
+                                    </p>
+                                )}
+                            </div>
+
+                            <button
+                                onClick={() => handlePlanSelect(plan)}
+                                className={`w-full py-3 rounded-lg font-semibold transition-colors ${
+                                    plan.isHighlighted
+                                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                        : 'bg-white dark:bg-slate-700 text-blue-600 dark:text-white ring-1 ring-blue-500 hover:bg-blue-50 dark:hover:bg-slate-600'
+                                }`}
+                            >
+                                Elegir Plan
+                            </button>
+
+                            {/* --- SECCIÓN DE CARACTERÍSTICAS CORREGIDA --- */}
+                            <ul className="mt-8 space-y-4 text-sm">
+                                <li className="flex items-start">
+                                    <CheckIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                                    <span className="text-gray-700 dark:text-slate-300">
+                                        <strong>{plan.timbres > 0 ? plan.timbres.toLocaleString('es-MX') : 'No incluye'}</strong> Timbres Fiscales
+                                    </span>
+                                </li>
+                                {Array.isArray(plan.features) && plan.features.map((feature) => (
+                                    <li key={feature.text} className="flex items-start">
+                                        <CheckIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+                                        <span className="text-gray-700 dark:text-slate-300">{feature.text}</span>
+                                    </li>
+                                ))}
+                            </ul>
+                        </motion.div>
+                    ))}
                 </div>
+            )}
 
-                <button
-                    onClick={() => handlePlanSelect(plan)}
-                    className={`w-full py-3 rounded-lg font-semibold transition-colors ${
-                        plan.isHighlighted
-                            ? 'bg-blue-600 text-white hover:bg-blue-700'
-                            : 'bg-white dark:bg-slate-700 text-blue-600 dark:text-white ring-1 ring-blue-500 hover:bg-blue-50 dark:hover:bg-slate-600'
-                    }`}
-                >
-                    Elegir Plan
-                </button>
-
-                <ul className="mt-8 space-y-4 text-sm">
-    {/* Verificamos que plan.features sea un array antes de mapearlo */}
-    {Array.isArray(plan.features) && plan.features.map((feature) => (
-        <li key={feature.text} className="flex items-start">
-            <CheckIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-            <span className="text-gray-700 dark:text-slate-300">{feature.text}</span>
-        </li>
-    ))}
-</ul>
-            </motion.div>
-        ))}
-    </div>
-)}
-
-                {/* --- Sección de FAQ --- */}
-                <div className="mt-24 max-w-4xl mx-auto">
-                    <h2 className="text-3xl font-bold text-center mb-8 text-gray-900 dark:text-white">Dudas Comunes Sobre los Planes</h2>
-                    <div className="space-y-2">
-                        {faqData.map((faq, index) => (
-                            <FaqItem
-                                key={index}
-                                faq={faq}
-                                isOpen={expandedFAQ === index}
-                                onClick={() => setExpandedFAQ(expandedFAQ === index ? null : index)}
-                            />
-                        ))}
-                    </div>
+            {/* --- Sección de FAQ (sin cambios) --- */}
+            <div className="mt-24 max-w-4xl mx-auto">
+                <h2 className="text-3xl font-bold text-center mb-8 text-gray-900 dark:text-white">Dudas Comunes Sobre los Planes</h2>
+                <div className="space-y-2">
+                    {faqData.map((faq, index) => (
+                        <FaqItem
+                            key={index}
+                            faq={faq}
+                            isOpen={expandedFAQ === index}
+                            onClick={() => setExpandedFAQ(expandedFAQ === index ? null : index)}
+                        />
+                    ))}
                 </div>
-
             </div>
         </div>
-    );
+    </div>
+);
 }
 
 export default PlanSelection;
