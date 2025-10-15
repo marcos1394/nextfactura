@@ -4,7 +4,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
 import { useAuth } from '../hooks/useAuth';
-import { ShieldCheckIcon, SparklesIcon, ArrowRightIcon, LockClosedIcon, CheckCircleIcon, CreditCardIcon, ClockIcon, AwardIcon, TrendingUpIcon, UsersIcon, ZapIcon, StarIcon } from '@heroicons/react/24/solid';
+import { ShieldCheckIcon, SparklesIcon, ArrowRightIcon, LockClosedIcon, CheckCircleIcon, CreditCardIcon, AwardIcon, UsersIcon, ZapIcon, ArrowTrendingUpIcon } from '@heroicons/react/24/solid';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 
@@ -125,7 +125,7 @@ function PaymentGateway() {
 
     const highlightFeatures = [
         {
-            icon: TrendingUpIcon,
+            icon: ArrowTrendingUpIcon,
             title: "Crece sin límites",
             description: "Escala tu negocio con herramientas empresariales"
         },
