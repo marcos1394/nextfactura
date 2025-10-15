@@ -238,7 +238,21 @@ function PlanSelection() {
                 const response = await fetch('/api/payments/plans');
                 const data = await response.json();
                 if (data.success) {
-                    setPlans(data.plans);
+                    // Filtrar planes únicos basándose en el nombre
+                    // Tomamos solo los planes con price_annually diferente de price_monthly
+                    const uniquePlans = data.plans.reduce((acc, plan) => {
+                        const existing = acc.find(p => p.name === plan.name);
+                        if (!existing) {
+                            acc.push(plan);
+                        } else if (plan.price_annually !== plan.price_monthly && existing.price_annually === existing.price_monthly) {
+                            // Reemplazar con el plan que tiene precios diferentes (anual)
+                            const index = acc.findIndex(p => p.name === plan.name);
+                            acc[index] = plan;
+                        }
+                        return acc;
+                    }, []);
+                    
+                    setPlans(uniquePlans);
                 } else {
                     throw new Error('No se pudieron cargar los planes.');
                 }
@@ -253,12 +267,15 @@ function PlanSelection() {
 
     const handlePlanSelect = (plan) => {
         const featuresArray = Array.isArray(plan.features) ? plan.features : [];
+        
+        // Calcular el precio anual con descuento del 15%
+        const annualPrice = plan.price_monthly * 12 * 0.85;
 
         const selectedOption = {
             id: billingCycle === 'annually' ? plan.mercadopagoId_annually : plan.mercadopagoId_monthly,
             product: plan.name,
             name: `Plan ${billingCycle === 'monthly' ? 'Mensual' : 'Anual'}`,
-            price: billingCycle === 'annually' ? plan.price_annually : plan.price_monthly,
+            price: billingCycle === 'annually' ? annualPrice : plan.price_monthly,
             period: billingCycle,
             features: featuresArray,
         };
@@ -377,7 +394,7 @@ function PlanSelection() {
                                             <span className="text-2xl font-semibold text-gray-500 dark:text-slate-400">$</span>
                                             <span className="text-5xl font-extrabold text-gray-900 dark:text-white mx-1">
                                                 {(billingCycle === 'annually' 
-                                                    ? plan.price_annually / 12 
+                                                    ? (plan.price_monthly * 12 * 0.85) / 12 
                                                     : plan.price_monthly
                                                 ).toFixed(0)}
                                             </span>
@@ -389,12 +406,12 @@ function PlanSelection() {
                                                     <span className="line-through">${(plan.price_monthly * 12).toLocaleString('es-MX')}</span>
                                                     {' '}
                                                     <span className="font-bold text-green-600 dark:text-green-400">
-                                                        ${plan.price_annually.toLocaleString('es-MX')}
+                                                        ${(plan.price_monthly * 12 * 0.85).toLocaleString('es-MX', { maximumFractionDigits: 0 })}
                                                     </span>
                                                     {' '}al año
                                                 </p>
                                                 <p className="text-xs text-green-600 dark:text-green-400 font-semibold mt-1">
-                                                    Ahorras ${((plan.price_monthly * 12) - plan.price_annually).toLocaleString('es-MX')} MXN
+                                                    Ahorras ${((plan.price_monthly * 12) - (plan.price_monthly * 12 * 0.85)).toLocaleString('es-MX', { maximumFractionDigits: 0 })} MXN
                                                 </p>
                                             </div>
                                         )}
