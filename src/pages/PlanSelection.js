@@ -95,18 +95,20 @@ function PlanSelection() {
     fetchPlans();
 }, []); // El array vacío asegura que se ejecute solo una vez
 
-  const handlePlanSelect = (plan) => {
-      const selectedOption = {
-          id: plan.ids[billingCycle], // <-- CAMBIO CLAVE: Elige el ID correcto (monthly o annually)
-          product: plan.name,
-          name: `Plan ${billingCycle === 'monthly' ? 'Mensual' : 'Anual'}`,
-          price: plan.price[billingCycle],
-          period: billingCycle,
-          features: plan.features,
-      };
-      navigate('/payment', { state: { selectedPlan: selectedOption } });
-  };
+const handlePlanSelect = (plan) => {
+    // Aseguramos que 'features' sea un array, incluso si viene null o mal formateado
+    const featuresArray = Array.isArray(plan.features) ? plan.features : [];
 
+    const selectedOption = {
+        id: billingCycle === 'annually' ? plan.mercadopagoId_annually : plan.mercadopagoId_monthly,
+        product: plan.name,
+        name: `Plan ${billingCycle === 'monthly' ? 'Mensual' : 'Anual'}`,
+        price: billingCycle === 'annually' ? plan.price_annually : plan.price_monthly,
+        period: billingCycle,
+        features: featuresArray, // <-- Usamos el array seguro
+    };
+    navigate('/payment', { state: { selectedPlan: selectedOption } });
+};
     return (
         <div className={`min-h-screen ${darkMode ? 'bg-slate-900 text-white' : 'bg-gray-50 text-black'} py-16 sm:py-24 px-4 font-sans`}>
             <div className="container mx-auto max-w-7xl">
@@ -166,13 +168,14 @@ function PlanSelection() {
                 </button>
 
                 <ul className="mt-8 space-y-4 text-sm">
-                    {plan.features?.map((feature) => (
-                        <li key={feature.text} className="flex items-start">
-                            <CheckIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
-                            <span className="text-gray-700 dark:text-slate-300">{feature.text}</span>
-                        </li>
-                    ))}
-                </ul>
+    {/* Verificamos que plan.features sea un array antes de mapearlo */}
+    {Array.isArray(plan.features) && plan.features.map((feature) => (
+        <li key={feature.text} className="flex items-start">
+            <CheckIcon className="w-5 h-5 text-green-500 mr-3 flex-shrink-0" />
+            <span className="text-gray-700 dark:text-slate-300">{feature.text}</span>
+        </li>
+    ))}
+</ul>
             </motion.div>
         ))}
     </div>
