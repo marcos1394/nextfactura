@@ -4,6 +4,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
 import { UserIcon, EnvelopeIcon, LockClosedIcon, BuildingStorefrontIcon, PhoneIcon, CheckCircleIcon, XCircleIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/solid';
+import { useAuth } from '../hooks/useAuth';
+
 
 // --- Imports para la conexión al Backend ---
 import api from '../services/api'; // <-- NUEVO: Importamos nuestro cliente API
@@ -44,6 +46,8 @@ function RegisterPage() {
     // --- NUEVOS ESTADOS para manejar la interacción con la API ---
     const [isLoading, setIsLoading] = useState(false); // <-- NUEVO
     const [error, setError] = useState(null);       // <-- NUEVO
+    const { verifySession } = useAuth(); // <-- AÑADE ESTO
+
 
     const [currentStep, setCurrentStep] = useState(1);
     const [formData, setFormData] = useState({
@@ -87,46 +91,47 @@ function RegisterPage() {
     const handleNextStep = () => setCurrentStep(prev => prev + 1);
     const handlePrevStep = () => setCurrentStep(prev => prev - 1);
 
-    // --- FUNCIÓN DE ENVÍO FINAL (COMPLETAMENTE REESCRITA) ---
-    const handleFinalSubmit = async (e) => { // <-- Se convierte en función asíncrona
-        e.preventDefault();
-        if (!formData.termsAccepted) {
-            toast.warn('Debes aceptar los términos y condiciones.');
-            return;
-        }
+    // --- FUNCIÓN DE ENVÍO FINAL ---
+const handleFinalSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.termsAccepted) {
+        toast.warn('Debes aceptar los términos y condiciones.');
+        return;
+    }
 
-        // Reseteamos estados
-        setError(null);
-        setIsLoading(true);
+    setError(null);
+    setIsLoading(true);
 
-        try {
-            // Preparamos los datos que espera tu backend
-            const payload = {
-                name: formData.name,
-                email: formData.email,
-                password: formData.password,
-                restaurantName: formData.restaurantName,
-            };
-            
-            // Hacemos la llamada a la API
-            await api.post('/auth/register', payload);
+    try {
+        // 1. Preparamos los datos que espera tu backend
+        const payload = {
+            name: formData.name,
+            email: formData.email,
+            password: formData.password,
+            restaurantName: formData.restaurantName,
+        };
+        
+        // 2. Hacemos la llamada a la API de registro
+        await api.post('/auth/register', payload);
 
-            // Si todo sale bien...
-            toast.success('¡Registro exitoso! Por favor, inicia sesión.');
-            navigate('/login'); // Redirigimos al login para que el usuario entre
+        // --- CAMBIO CLAVE ---
+        // 3. Como el backend ya estableció la cookie de sesión,
+        //    le decimos al AuthContext que verifique esta nueva sesión
+        //    para actualizar el estado del usuario en toda la aplicación.
+        await verifySession(); 
 
-        } catch (err) {
-            // Si el backend devuelve un error...
-            const errorMessage = err.response?.data?.message || 'Ocurrió un error inesperado. Inténtalo de nuevo.';
-            setError(errorMessage); // Guardamos el error para mostrarlo
-            toast.error(errorMessage);
-            console.error('Error en el registro:', err);
+        // 4. Mostramos un mensaje de éxito y redirigimos a la página de planes.
+        toast.success('¡Registro exitoso! Ahora elige tu plan.');
+        navigate('/plans'); // <-- REDIRECCIÓN CORREGIDA
 
-        } finally {
-            // Pase lo que pase, dejamos de cargar
-            setIsLoading(false);
-        }
-    };
+    } catch (err) {
+        const errorMessage = err.response?.data?.message || 'Ocurrió un error inesperado.';
+        setError(errorMessage);
+        toast.error(errorMessage);
+    } finally {
+        setIsLoading(false);
+    }
+};
 
     const slideVariants = {
         enter: (direction) => ({ x: direction > 0 ? '100%' : '-100%', opacity: 0 }),
