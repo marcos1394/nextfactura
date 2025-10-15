@@ -4,7 +4,7 @@ import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useThemeContext } from '../context/ThemeContext';
 import { useAuth } from '../hooks/useAuth';
-import { ShieldCheckIcon, SparklesIcon, ArrowRightIcon, LockClosedIcon, CheckCircleIcon, CreditCardIcon, AwardIcon, UsersIcon, ZapIcon, ArrowTrendingUpIcon } from '@heroicons/react/24/solid';
+import { ShieldCheckIcon, SparklesIcon, ArrowRightIcon, LockClosedIcon, CheckCircleIcon, CreditCardIcon, AwardIcon, UsersIcon, ArrowTrendingUpIcon, BoltIcon } from '@heroicons/react/24/solid';
 import api from '../services/api';
 import { toast } from 'react-toastify';
 
@@ -135,7 +135,7 @@ function PaymentGateway() {
             description: "Trabaja junto a tu equipo sin fricciones"
         },
         {
-            icon: ZapIcon,
+            icon: BoltIcon,
             title: "Facturación instantánea",
             description: "Emite facturas en segundos, no en horas"
         }
