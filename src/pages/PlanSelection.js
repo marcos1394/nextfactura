@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckIcon, PlusIcon, MinusIcon, XMarkIcon, SparklesIcon, ShieldCheckIcon, ClockIcon } from 'lucide-react';
+import { CheckIcon, PlusIcon, MinusIcon, SparklesIcon, ShieldCheckIcon, ClockIcon, XCircleIcon } from 'lucide-react';
 
 // --- DATOS DE FAQ AMPLIADOS ---
 const faqData = [
@@ -135,7 +135,7 @@ const ComparisonTable = ({ plans, billingCycle }) => {
                     onClick={() => setShowComparison(false)}
                     className="text-gray-500 hover:text-gray-700 dark:text-slate-400 dark:hover:text-slate-300"
                 >
-                    <XMarkIcon className="w-6 h-6" />
+                    <XCircleIcon className="w-6 h-6" />
                 </button>
             </div>
             
