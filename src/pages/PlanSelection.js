@@ -266,21 +266,26 @@ function PlanSelection() {
     }, []);
 
     const handlePlanSelect = (plan) => {
-        const featuresArray = Array.isArray(plan.features) ? plan.features : [];
-        
-        // Calcular el precio anual con descuento del 15%
-        const annualPrice = plan.price_monthly * 12 * 0.85;
+    const featuresArray = Array.isArray(plan.features) ? plan.features : [];
+    
+    // Mantenemos tu cálculo de precio anual
+    const annualPrice = plan.price_monthly * 12 * 0.85;
 
-        const selectedOption = {
-            id: billingCycle === 'annually' ? plan.mercadopagoId_annually : plan.mercadopagoId_monthly,
-            product: plan.name,
-            name: `Plan ${billingCycle === 'monthly' ? 'Mensual' : 'Anual'}`,
-            price: billingCycle === 'annually' ? annualPrice : plan.price_monthly,
-            period: billingCycle,
-            features: featuresArray,
-        };
-        navigate('/payment', { state: { selectedPlan: selectedOption } });
+    const selectedOption = {
+        // --- CORRECCIÓN CLAVE ---
+        // Usamos el ID del plan que viene de la base de datos.
+        // La página de pago espera recibir este ID.
+        id: plan.id, 
+        // --- FIN DE LA CORRECCIÓN ---
+        
+        product: plan.name,
+        name: `Plan ${billingCycle === 'monthly' ? 'Mensual' : 'Anual'}`,
+        price: billingCycle === 'annually' ? annualPrice : plan.price_monthly,
+        period: billingCycle,
+        features: featuresArray,
     };
+    navigate('/payment', { state: { selectedPlan: selectedOption } });
+};
 
     const testimonials = [
         {
