@@ -43,32 +43,34 @@ function LoginPage() {
 
     // --- MANEJADOR DE LOGIN REAL ---
     const handleLogin = async (e) => {
-        e.preventDefault();
-        if (!email || !password) {
-            toast.warn('Por favor, completa todos los campos.');
-            return;
-        }
+    e.preventDefault();
+    if (!email || !password) {
+        toast.warn('Por favor, completa todos los campos.');
+        return;
+    }
+    
+    setError(null);
+    setIsLoading(true);
+
+    try {
+        // Llamamos a la función login de nuestro AuthContext, que ahora devuelve la ruta de destino.
+        const destination = await login(email, password);
         
-        setError(null);
-        setIsLoading(true);
+        toast.success('¡Bienvenido de nuevo!');
+        
+        // Redirigimos al destino que el AuthContext decidió ('/plans', '/restaurant-config', o '/dashboard').
+        navigate(destination, { replace: true });
 
-        try {
-            // Llamamos a la función login de nuestro AuthContext
-            await login(email, password);
-            toast.success('¡Bienvenido de nuevo!');
-            navigate(from, { replace: true }); // Redirigimos a la página original o al dashboard
+    } catch (err) {
+        const errorMessage = err.response?.data?.message || 'Credenciales inválidas o error de conexión.';
+        setError(errorMessage);
+        toast.error(errorMessage);
+        console.error('Error en el login:', err);
 
-        } catch (err) {
-            const errorMessage = err.response?.data?.message || 'Credenciales inválidas o error de conexión.';
-            setError(errorMessage);
-            toast.error(errorMessage);
-            console.error('Error en el login:', err);
-
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
+    } finally {
+        setIsLoading(false);
+    }
+};
     // --- MANEJADOR DE LOGIN CON GOOGLE REAL ---
     const handleGoogleLogin = () => {
         // Esta es la URL de tu backend que inicia el flujo de OAuth con Google
