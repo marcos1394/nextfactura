@@ -1,6 +1,9 @@
+// src/pages/PlanSelection.js
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckIcon, PlusIcon, MinusIcon, SparklesIcon, ShieldCheckIcon, ClockIcon, XCircleIcon } from 'lucide-react';
+import { useThemeContext } from '../context/ThemeContext';
+import { CheckIcon, PlusIcon, MinusIcon, SparklesIcon, ShieldCheckIcon, ClockIcon, XCircleIcon, StarIcon, ArrowRightIcon } from '@heroicons/react/24/solid';
 
 // --- DATOS DE FAQ AMPLIADOS ---
 const faqData = [
@@ -192,68 +195,101 @@ const ComparisonTable = ({ plans, billingCycle }) => {
     );
 };
 
+const Testimonial = ({ name, role, text, rating }) => (
+    <motion.div
+        className="p-6 rounded-xl bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow"
+        whileHover={{ y: -5 }}
+    >
+        <div className="flex gap-1 mb-3">
+            {[...Array(rating)].map((_, i) => (
+                <StarIcon key={i} className="w-4 h-4 text-yellow-400" />
+            ))}
+        </div>
+        <p className="text-gray-700 dark:text-slate-300 text-sm leading-relaxed mb-4">
+            "{text}"
+        </p>
+        <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white font-bold">
+                {name.charAt(0)}
+            </div>
+            <div>
+                <p className="font-semibold text-gray-900 dark:text-white text-sm">{name}</p>
+                <p className="text-xs text-gray-500 dark:text-slate-400">{role}</p>
+            </div>
+        </div>
+    </motion.div>
+);
+
 // --- COMPONENTE PRINCIPAL ---
 function PlanSelection() {
-    const [darkMode] = useState(false);
+    const { darkMode } = useThemeContext();
+    const navigate = useNavigate();
     const [billingCycle, setBillingCycle] = useState('annually');
     const [expandedFAQ, setExpandedFAQ] = useState(null);
-    const [isLoading, setIsLoading] = useState(false);
-    const [plans] = useState([
-        {
-            id: 1,
-            name: 'Básico',
-            description: 'Perfecto para freelancers y emprendedores',
-            price_monthly: 299,
-            price_annually: 3050,
-            timbres: 50,
-            isHighlighted: false,
-            features: [
-                { text: 'Panel de control intuitivo' },
-                { text: 'Soporte por email' },
-                { text: '1 usuario incluido' }
-            ]
-        },
-        {
-            id: 2,
-            name: 'Profesional',
-            description: 'Ideal para pequeñas y medianas empresas',
-            price_monthly: 599,
-            price_annually: 6120,
-            timbres: 150,
-            isHighlighted: true,
-            tagline: 'MÁS POPULAR',
-            features: [
-                { text: 'Todo lo del plan Básico' },
-                { text: 'Hasta 5 usuarios' },
-                { text: 'Reportes avanzados' },
-                { text: 'Soporte prioritario' }
-            ]
-        },
-        {
-            id: 3,
-            name: 'Empresarial',
-            description: 'Para grandes volúmenes de facturación',
-            price_monthly: 1199,
-            price_annually: 12240,
-            timbres: 500,
-            isHighlighted: false,
-            features: [
-                { text: 'Todo lo del plan Profesional' },
-                { text: 'Usuarios ilimitados' },
-                { text: 'API de integración' },
-                { text: 'Asesor dedicado' }
-            ]
-        }
-    ]);
+    const [plans, setPlans] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    // Fetch de planes desde la API
+    useEffect(() => {
+        const fetchPlans = async () => {
+            try {
+                setIsLoading(true);
+                const response = await fetch('/api/payments/plans');
+                const data = await response.json();
+                if (data.success) {
+                    setPlans(data.plans);
+                } else {
+                    throw new Error('No se pudieron cargar los planes.');
+                }
+            } catch (err) {
+                setError(err.message);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchPlans();
+    }, []);
 
     const handlePlanSelect = (plan) => {
-        console.log('Plan seleccionado:', plan);
+        const featuresArray = Array.isArray(plan.features) ? plan.features : [];
+
+        const selectedOption = {
+            id: billingCycle === 'annually' ? plan.mercadopagoId_annually : plan.mercadopagoId_monthly,
+            product: plan.name,
+            name: `Plan ${billingCycle === 'monthly' ? 'Mensual' : 'Anual'}`,
+            price: billingCycle === 'annually' ? plan.price_annually : plan.price_monthly,
+            period: billingCycle,
+            features: featuresArray,
+        };
+        navigate('/payment', { state: { selectedPlan: selectedOption } });
     };
+
+    const testimonials = [
+        {
+            name: "María González",
+            role: "CEO, Consultoría MG",
+            text: "NextFactura simplificó completamente nuestro proceso de facturación. Ahora emitimos facturas en segundos.",
+            rating: 5
+        },
+        {
+            name: "Carlos Ramírez",
+            role: "Contador, Despacho CR",
+            text: "La mejor inversión que hemos hecho. El soporte es excelente y la plataforma muy intuitiva.",
+            rating: 5
+        },
+        {
+            name: "Ana Martínez",
+            role: "Freelancer",
+            text: "Como freelancer, necesitaba algo simple y eficiente. NextFactura superó mis expectativas.",
+            rating: 5
+        }
+    ];
 
     return (
         <div className={`min-h-screen ${darkMode ? 'bg-slate-900 text-white' : 'bg-gradient-to-b from-gray-50 to-white text-black'} py-12 sm:py-20 px-4 font-sans`}>
             <div className="container mx-auto max-w-7xl">
-                {/* --- Hero Section Mejorado --- */}
+                {/* --- Hero Section --- */}
                 <div className="text-center mb-16">
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
@@ -300,10 +336,11 @@ function PlanSelection() {
                     />
                 </div>
 
-                {/* --- Cards de Planes --- */}
-                {isLoading ? (
-                    <p className="text-center">Cargando planes...</p>
-                ) : (
+                {/* --- Renderizado Condicional --- */}
+                {isLoading && <p className="text-center">Cargando planes...</p>}
+                {error && <p className="text-center text-red-500">{error}</p>}
+                
+                {!isLoading && !error && (
                     <>
                         <div className="grid lg:grid-cols-3 gap-8 items-start mb-8">
                             {plans.map((plan, index) => (
@@ -401,6 +438,23 @@ function PlanSelection() {
                     </>
                 )}
 
+                {/* --- Sección de Testimonios --- */}
+                <div className="my-20">
+                    <div className="text-center mb-12">
+                        <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-3">
+                            Miles de empresas confían en NextFactura
+                        </h2>
+                        <p className="text-gray-600 dark:text-slate-400">
+                            Descubre por qué somos la opción #1 en facturación electrónica
+                        </p>
+                    </div>
+                    <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+                        {testimonials.map((testimonial, index) => (
+                            <Testimonial key={index} {...testimonial} />
+                        ))}
+                    </div>
+                </div>
+
                 {/* --- Sección de Garantía --- */}
                 <div className="my-16 p-8 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 dark:from-slate-800 dark:to-slate-800 border border-blue-200 dark:border-slate-700 text-center">
                     <ShieldCheckIcon className="w-12 h-12 text-blue-600 dark:text-blue-400 mx-auto mb-4" />
@@ -413,7 +467,7 @@ function PlanSelection() {
                     </p>
                 </div>
 
-                {/* --- FAQ Mejorado --- */}
+                {/* --- FAQ --- */}
                 <div className="mt-24 max-w-4xl mx-auto">
                     <div className="text-center mb-12">
                         <h2 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-3">
@@ -441,8 +495,9 @@ function PlanSelection() {
                         <p className="mb-6 text-blue-100">
                             Nuestro equipo está listo para ayudarte a elegir el plan perfecto para tu negocio
                         </p>
-                        <button className="px-8 py-3 bg-white text-blue-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors shadow-lg">
+                        <button className="inline-flex items-center px-8 py-3 bg-white text-blue-600 rounded-lg font-semibold hover:bg-gray-100 transition-colors shadow-lg">
                             Contactar a Ventas
+                            <ArrowRightIcon className="w-5 h-5 ml-2" />
                         </button>
                     </div>
                 </div>
