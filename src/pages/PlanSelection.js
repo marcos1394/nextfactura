@@ -275,7 +275,7 @@ function PlanSelection() {
         // --- CORRECCIÓN CLAVE ---
         // Usamos el ID del plan que viene de la base de datos.
         // La página de pago espera recibir este ID.
-        id: plan.id, 
+        planId: plan.id, 
         // --- FIN DE LA CORRECCIÓN ---
         
         product: plan.name,
