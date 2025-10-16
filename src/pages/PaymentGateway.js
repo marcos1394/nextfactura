@@ -93,35 +93,47 @@ function PaymentGateway() {
     }
     
    const handlePayment = async () => {
-        // La validación ahora es más simple porque ya sabemos que 'user' existe
-        if (!selectedPlan?.planId) {
-            toast.error('Error: No se ha seleccionado un plan válido.');
-            navigate('/plans');
-            return;
+    // --- VALIDACIÓN ROBUSTA ---
+    // Verificamos explícitamente cada pieza de datos que necesitamos ANTES de continuar.
+    if (!selectedPlan?.planId) {
+        toast.error('Error: ID de plan no válido.');
+        console.error('[PaymentGateway] Error: selectedPlan.planId es nulo o indefinido.', selectedPlan);
+        navigate('/plans');
+        return;
+    }
+    if (!user?.profile?.id) {
+        toast.error('Error: Usuario no autenticado correctamente.');
+        console.error('[PaymentGateway] Error: user.profile.id es nulo o indefinido.', user);
+        navigate('/login');
+        return;
+    }
+    
+    setIsProcessing(true);
+
+    try {
+        console.log(`[PaymentGateway] Iniciando preferencia para plan: ${selectedPlan.planId}, usuario: ${user.profile.id}`);
+        
+        const response = await api.post('/payments/create-preference', {
+            planId: selectedPlan.planId,
+            billingCycle: selectedPlan.period,
+            userId: user.profile.id,
+            origin: 'webapp_onboarding'
+        });
+
+        if (response.data.success && response.data.init_point) {
+            window.location.href = response.data.init_point;
+        } else {
+            throw new Error(response.data.message || 'No se pudo obtener la URL de pago.');
         }
 
-        setIsProcessing(true);
-
-        try {
-            const response = await api.post('/payments/create-preference', {
-                planId: selectedPlan.planId,
-                billingCycle: selectedPlan.period,
-                userId: user.profile.id, // 'user' ya está garantizado que existe
-                origin: 'webapp_onboarding'
-            });
-
-            if (response.data.success && response.data.init_point) {
-                window.location.href = response.data.init_point;
-            } else {
-                throw new Error(response.data.message || 'No se pudo obtener la URL de pago.');
-            }
-
-        } catch (error) {
-            const errorMessage = error.response?.data?.message || 'Error al iniciar el proceso de pago. Inténtalo de nuevo.';
-            toast.error(errorMessage);
-            setIsProcessing(false);
-        }
-    };
+    } catch (error) {
+        // Este log nos mostrará el error exacto, ya sea de red o del backend.
+        console.error('[PaymentGateway] Fallo la creación de la preferencia:', error);
+        const errorMessage = error.response?.data?.message || 'Error al iniciar el proceso de pago. Inténtalo de nuevo.';
+        toast.error(errorMessage);
+        setIsProcessing(false);
+    }
+};
     
     // Cálculos de precios (asumiendo que vienen en 'selectedPlan')
     const priceFormatted = (selectedPlan.price || 0).toLocaleString('es-MX', { style: 'currency', currency: 'MXN' });
