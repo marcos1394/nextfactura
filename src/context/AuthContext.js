@@ -31,37 +31,32 @@ export const AuthProvider = ({ children }) => {
         verifySession();
     }, [verifySession]);
 
-    // Función de login que ahora decide a dónde redirigir al usuario
     const login = async (email, password) => {
-        try {
-            const response = await loginUser(email, password);
-            
-            // Después de un login exitoso, el backend nos devuelve los datos del usuario.
-            // Actualizamos el estado del usuario en el contexto.
-            const userData = response.user;
-            setUser(userData);
-            
-            // --- LÓGICA DE REDIRECCIÓN INTELIGENTE ---
-            // Decidimos a dónde debe ir el usuario basándonos en su estado.
-            
-            // Caso 1: El usuario no tiene un plan o su plan no está activo.
-            if (!userData.subscription || userData.subscription.status !== 'active') {
-                return '/plans'; // Destino: página de planes
-            }
-            
-            // Caso 2: El usuario tiene plan activo, pero no ha configurado su restaurante.
-            if (!userData.restaurants || userData.restaurants.length === 0) {
-                return '/restaurant-config'; // Destino: página de configuración de restaurante
-            }
-            
-            // Caso 3: El usuario tiene todo en orden.
-            return '/dashboard'; // Destino: el dashboard principal
+    try {
+        // 1. Llama a la API de login. El backend establece la cookie y devuelve el 'status'.
+        const loginResponse = await loginUser(email, password);
 
-        } catch (error) {
-            setUser(null); // Nos aseguramos de que el estado esté limpio si el login falla.
-            throw error; // Lanzamos el error para que LoginPage lo muestre.
+        // --- CORRECCIÓN CLAVE ---
+        // 2. Inmediatamente después, llama a verifySession.
+        //    Esta función llamará a /account-details y establecerá el
+        //    estado 'user' con la estructura anidada correcta ({ profile, ... }).
+        await verifySession();
+
+        // 3. Usa el objeto 'status' que devolvió la respuesta del login para la redirección.
+        const status = loginResponse.status;
+        if (!status.hasPlan) {
+            return '/plans';
         }
-    };
+        if (!status.hasRestaurant) {
+            return '/restaurant-config';
+        }
+        return '/dashboard';
+
+    } catch (error) {
+        setUser(null);
+        throw error;
+    }
+};
 
     // La función logout no cambia
     const logout = async () => {
