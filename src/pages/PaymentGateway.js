@@ -70,12 +70,21 @@ function PaymentGateway() {
     const location = useLocation();
     const navigate = useNavigate();
     const { darkMode } = useThemeContext();
-    const { user } = useAuth();
     const [isProcessing, setIsProcessing] = useState(false);
     const [showFeatures, setShowFeatures] = useState(true);
+    const { user, isLoading: isAuthLoading } = useAuth(); // <-- OBTENEMOS EL ESTADO DE CARGA
 
     // Los datos del plan ahora vienen exclusivamente de la página anterior
     const { selectedPlan } = location.state || {};
+    // --- CORRECCIÓN CLAVE ---
+    // Mostramos un estado de carga mientras el AuthContext verifica la sesión del usuario.
+    if (isAuthLoading) {
+        return (
+            <div className={`min-h-screen flex justify-center items-center ${darkMode ? 'bg-slate-900 text-white' : 'bg-gray-50'}`}>
+                Cargando sesión...
+            </div>
+        );
+    }
 
     // Redirección de seguridad si no hay un plan seleccionado
     if (!selectedPlan) {
@@ -83,9 +92,10 @@ function PaymentGateway() {
         return null;
     }
     
-    const handlePayment = async () => {
-        if (!selectedPlan?.id || !user?.profile?.id) {
-            toast.error('Error: No se ha seleccionado un plan o usuario válido.');
+   const handlePayment = async () => {
+        // La validación ahora es más simple porque ya sabemos que 'user' existe
+        if (!selectedPlan?.planId) {
+            toast.error('Error: No se ha seleccionado un plan válido.');
             navigate('/plans');
             return;
         }
@@ -94,9 +104,9 @@ function PaymentGateway() {
 
         try {
             const response = await api.post('/payments/create-preference', {
-                planId: selectedPlan.id,
+                planId: selectedPlan.planId,
                 billingCycle: selectedPlan.period,
-                userId: user.profile.id,
+                userId: user.profile.id, // 'user' ya está garantizado que existe
                 origin: 'webapp_onboarding'
             });
 
