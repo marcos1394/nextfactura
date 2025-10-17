@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }) => {
                 return '/plans';
             }
             if (!userData.restaurants || userData.restaurants.length === 0) {
-                return '/restaurant-config';
+                return '/restaurantconfig';
             }
             return '/dashboard';
     

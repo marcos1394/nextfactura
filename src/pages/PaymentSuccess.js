@@ -59,7 +59,7 @@ function PaymentSuccessPage() {
 
                         <div className="mt-10">
                             <button
-                                onClick={() => navigate('/restaurant-config')}
+                                onClick={() => navigate('/restaurantconfig')}
                                 className="w-full py-4 px-4 bg-blue-600 hover:bg-blue-700 text-white font-bold text-lg rounded-lg shadow-lg flex items-center justify-center gap-2 transition-all duration-300 transform hover:-translate-y-1"
                             >
                                 <RocketLaunchIcon className="w-6 h-6" />
