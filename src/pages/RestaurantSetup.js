@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useCallback } from 'react'; // <-- AÑADIR useCallbackimport { motion, AnimatePresence } from 'framer-motion';
 import {
     BuildingStorefrontIcon,
     MapPinIcon,
     TagIcon,
+    XCircleIcon,
     ReceiptPercentIcon,
     CircleStackIcon,
     IdentificationIcon,
@@ -11,8 +11,10 @@ import {
     CpuChipIcon,
     PlusIcon,
     TrashIcon,
+    ArrowPathIcon,
     CheckIcon,
     ChevronRightIcon,
+    CheckCircleIcon,
     ChevronDownIcon,
     DocumentIcon,
     KeyIcon,
@@ -29,9 +31,11 @@ import {
 import { 
     createRestaurant, 
     updatePortalConfig, 
-    testPOSConnection 
+    testPOSConnection,
+    checkSubdomainAvailability 
 } from '../services/api';
-
+import { useDebounce } from '../hooks/useDebounce'; // (Un hook de debounce es recomendado aquí)
+import { motion, AnimatePresence } from 'framer-motion';
 
 const RestaurantSetup = () => {
     // Estados principales
@@ -44,6 +48,60 @@ const RestaurantSetup = () => {
     const [submitError, setSubmitError] = useState(null);
     const [isTestingConnection, setIsTestingConnection] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState(null);
+
+    // --- ESTADOS PARA VALIDACIÓN DE SUBDOMINIO ---
+    const [isCheckingSubdomain, setIsCheckingSubdomain] = useState(false);
+    const [subdomainStatus, setSubdomainStatus] = useState({
+        available: null, // null, true, o false
+        message: '',
+        cleanName: ''
+    });
+    
+    const debouncedSubdomain = useDebounce(portalConfig.subdomain, 500);
+
+    // 2. Función para limpiar el nombre
+    const generateSubdomainName = useCallback((name) => {
+        return name
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .replace(/[^a-z0-9-]/g, '') // Solo letras, números y guiones
+            .replace(/-+/g, '-')
+            .replace(/^-|-$/g, '')
+            .substring(0, 20);
+    }, []);
+
+    // 3. useEffect: Reacciona al valor "retrasado" para llamar a la API
+    useEffect(() => {
+        const checkAvailability = async () => {
+            const cleanName = generateSubdomainName(debouncedSubdomain);
+
+            if (cleanName.length < 3) {
+                setSubdomainStatus({ available: null, message: '', cleanName });
+                return;
+            }
+            
+            setIsCheckingSubdomain(true);
+            try {
+                const response = await checkSubdomainAvailability(cleanName);
+                setSubdomainStatus({
+                    available: response.available,
+                    message: response.message || (response.available ? '¡Disponible!' : 'No disponible'),
+                    cleanName: cleanName
+                });
+            } catch (error) {
+                setSubdomainStatus({
+                    available: false,
+                    message: error.message || 'Error al verificar',
+                    cleanName: cleanName
+                });
+            } finally {
+                setIsCheckingSubdomain(false);
+            }
+        };
+        
+        checkAvailability();
+    }, [debouncedSubdomain, generateSubdomainName]);
 
     // Estado del portal
     const [portalConfig, setPortalConfig] = useState({
@@ -83,6 +141,7 @@ const RestaurantSetup = () => {
 
     // Funciones auxiliares
     const activeRestaurant = restaurants.find(r => r.id === activeRestaurantId);
+
 
     const updateRestaurant = (field, value) => {
         console.log(`[STATE UPDATE] Campo: '${field}', Nuevo Valor: '${value}'`);
@@ -303,14 +362,50 @@ const RestaurantSetup = () => {
                                                     onChange={(e) => updatePortalConfig('portalName', e.target.value)}
                                                 />
                                                 
-                                                <InputField 
-                                                    icon={GlobeAltIcon} 
-                                                    label="Subdominio" 
-                                                    placeholder="mirestaurante"
-                                                    addon=".nextmanager.com.mx"
-                                                    value={portalConfig.subdomain}
-                                                    onChange={(e) => updatePortalConfig('subdomain', validateSubdomain(e.target.value))}
-                                                />
+                                                <div>
+            <InputField 
+                icon={GlobeAltIcon} 
+                label="Subdominio" 
+                placeholder="mirestaurante"
+                addon=".nextmanager.com.mx"
+                value={portalConfig.subdomain}
+                // Actualiza el estado con el valor crudo, el useEffect se encarga de limpiarlo
+                onChange={(e) => updatePortalConfig('subdomain', e.target.value)}
+            />
+            
+            {/* Mensaje de retroalimentación en tiempo real */}
+            <AnimatePresence>
+                {(isCheckingSubdomain || subdomainStatus.available !== null) && (
+                    <motion.div 
+                        className="flex items-center gap-2 mt-2"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                    >
+                        {isCheckingSubdomain ? (
+                            <>
+                                <ArrowPathIcon className="w-4 h-4 text-gray-400 animate-spin" />
+                                <p className="text-sm text-gray-500 dark:text-slate-400">Comprobando disponibilidad...</p>
+                            </>
+                        ) : subdomainStatus.available === true ? (
+                            <>
+                                <CheckCircleIcon className="w-4 h-4 text-green-500" />
+                                <p className="text-sm text-green-600">
+                                    ¡Disponible! Tu URL será: <strong>{subdomainStatus.cleanName}.nextmanager.com.mx</strong>
+                                </p>
+                            </>
+                        ) : subdomainStatus.available === false ? (
+                            <>
+                                <XCircleIcon className="w-4 h-4 text-red-500" />
+                                <p className="text-sm text-red-500">{subdomainStatus.message}</p>
+                            </>
+                        ) : null}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+        {/* --- FIN DEL BLOQUE DE SUBDOMINIO --- */}
+                                            
 
                                                 <div>
                                                     <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">Color Primario</label>

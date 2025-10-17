@@ -125,6 +125,19 @@ export const testPOSConnection = async (restaurantId) => {
     }
 };
 
+export const checkSubdomainAvailability = async (subdomainName) => {
+    try {
+        // Hacemos un GET a la nueva ruta, pasando el nombre como parámetro de consulta
+        const response = await api.get('/restaurants/subdomain/check', { 
+            params: { name: subdomainName } 
+        });
+        return response.data; // Devuelve { success: true, available: true/false }
+    } catch (error) {
+        // Si el backend devuelve un 400 (formato inválido), lo capturamos aquí
+        throw error.response?.data || new Error('Error al verificar el subdominio.');
+    }
+};
+
 export const getRestaurants = async () => {
     try {
         const response = await api.get('/restaurants/');
