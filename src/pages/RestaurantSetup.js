@@ -56,6 +56,18 @@ const RestaurantSetup = () => {
         message: '',
         cleanName: ''
     });
+      const [portalConfig, setPortalConfig] = useState({
+        portalName: 'Mi Restaurante',
+        subdomain: 'mirestaurante',
+        primaryColor: '#2563eb',
+        logoUrl: '',
+        logoFile: null,
+        welcomeMessage: 'Bienvenido a nuestro portal de facturación',
+        showWelcomeMessage: true,
+        backgroundImage: '',
+        backgroundFile: null,
+        customCSS: ''
+    });
     
     const debouncedSubdomain = useDebounce(portalConfig.subdomain, 500);
 
@@ -104,18 +116,7 @@ const RestaurantSetup = () => {
     }, [debouncedSubdomain, generateSubdomainName]);
 
     // Estado del portal
-    const [portalConfig, setPortalConfig] = useState({
-        portalName: 'Mi Restaurante',
-        subdomain: 'mirestaurante',
-        primaryColor: '#2563eb',
-        logoUrl: '',
-        logoFile: null,
-        welcomeMessage: 'Bienvenido a nuestro portal de facturación',
-        showWelcomeMessage: true,
-        backgroundImage: '',
-        backgroundFile: null,
-        customCSS: ''
-    });
+  
 
     // Estado de restaurantes
     const [restaurants, setRestaurants] = useState([
