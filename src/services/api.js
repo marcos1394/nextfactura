@@ -125,6 +125,30 @@ export const testPOSConnection = async (restaurantId) => {
     }
 };
 
+export const getFiscalRegimes = async (personType = null) => {
+    try {
+        // Prepara los parámetros de consulta
+        const config = {
+            params: {}
+        };
+        
+        // Si se especifica un tipo ('F' o 'M'), lo añade a la petición
+        if (personType) {
+            config.params.type = personType;
+        }
+
+        const response = await api.get('/restaurants/catalogs/fiscal-regimes', config);
+        
+        if (response.data.success) {
+            return response.data.regimes; // Devuelve solo el array de regímenes
+        } else {
+            throw new Error('No se pudo cargar el catálogo de regímenes.');
+        }
+    } catch (error) {
+        throw error.response?.data || new Error('Error al obtener el catálogo de regímenes.');
+    }
+};
+
 export const checkSubdomainAvailability = async (subdomainName) => {
     try {
         // Hacemos un GET a la nueva ruta, pasando el nombre como parámetro de consulta

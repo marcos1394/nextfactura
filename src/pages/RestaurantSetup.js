@@ -32,7 +32,8 @@ import {
     createRestaurant, 
     updatePortalConfig, 
     testPOSConnection,
-    checkSubdomainAvailability 
+    checkSubdomainAvailability,
+    getFiscalRegimes 
 } from '../services/api';
 import { useDebounce } from '../hooks/useDebounce'; // (Un hook de debounce es recomendado aquí)
 import { motion, AnimatePresence } from 'framer-motion';
@@ -48,7 +49,7 @@ const RestaurantSetup = () => {
     const [submitError, setSubmitError] = useState(null);
     const [isTestingConnection, setIsTestingConnection] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState(null);
-
+const [fiscalRegimes, setFiscalRegimes] = useState([]);
     // --- ESTADOS PARA VALIDACIÓN DE SUBDOMINIO ---
     const [isCheckingSubdomain, setIsCheckingSubdomain] = useState(false);
     const [subdomainStatus, setSubdomainStatus] = useState({
@@ -139,6 +140,22 @@ const RestaurantSetup = () => {
         enableSoftRestaurant: false
     }
 ]);
+
+useEffect(() => {
+        const fetchFiscalRegimes = async () => {
+            try {
+                // Filtramos por 'F' (Persona Física) y 'M' (Persona Moral)
+                // Es más eficiente que traerlos todos si no los necesitas.
+                // Si quieres todos, simplemente llama a getFiscalRegimes() sin parámetros.
+                const regimes = await getFiscalRegimes(); 
+                setFiscalRegimes(regimes);
+            } catch (error) {
+                console.error("Error al cargar el catálogo de regímenes fiscales:", error);
+            }
+        };
+        
+        fetchFiscalRegimes();
+    }, []); // El array vacío asegura que solo se ejecute una vez
 
     // Funciones auxiliares
     const activeRestaurant = restaurants.find(r => r.id === activeRestaurantId);
@@ -299,9 +316,6 @@ const RestaurantSetup = () => {
     }
 };
 
-    const validateSubdomain = (value) => {
-        return value.replace(/[^a-zA-Z0-9-]/g, '').toLowerCase();
-    };
 
     return (
         <div className={`min-h-screen font-sans transition-colors duration-300 ${darkMode ? 'dark bg-slate-900 text-white' : 'bg-gray-50 text-black'}`}>
@@ -667,13 +681,36 @@ const RestaurantSetup = () => {
                                 onChange={(e) => updateRestaurant('businessName', e.target.value)}
                             />
                             
-                            <InputField 
-                                icon={BookOpenIcon}
-                                label="Régimen Fiscal"
-                                placeholder="601 - General de Ley Personas Morales"
-                                value={activeRestaurant.fiscalRegime}
-                                onChange={(e) => updateRestaurant('fiscalRegime', e.target.value)}
-                            />
+                           {/* --- INICIO DE LA SECCIÓN CORREGIDA --- */}
+<div>
+    <label htmlFor="fiscalRegime" className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-2">
+        Régimen Fiscal
+    </label>
+    <div className="relative">
+        <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+            <BookOpenIcon className="w-5 h-5 text-gray-400" />
+        </div>
+        <select
+            id="fiscalRegime"
+            name="fiscalRegime"
+            value={activeRestaurant.fiscalRegime}
+            onChange={(e) => updateRestaurant('fiscalRegime', e.target.value)}
+            className="w-full pl-10 pr-10 py-3 rounded-lg border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 focus:ring-2 focus:ring-blue-500 transition-colors appearance-none"
+        >
+            <option value="" disabled>Selecciona un régimen...</option>
+            
+            {fiscalRegimes.map((regime) => (
+                <option key={regime.code} value={regime.code}>
+                    {regime.code} - {regime.description}
+                </option>
+            ))}
+        </select>
+        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700 dark:text-slate-400">
+            <ChevronDownIcon className="w-4 h-4" />
+        </div>
+    </div>
+</div>
+{/* --- FIN DE LA SECCIÓN CORREGIDA --- */}
 
                             <InputField 
                                 icon={MapPinIcon} 
