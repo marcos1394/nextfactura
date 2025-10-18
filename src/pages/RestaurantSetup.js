@@ -141,6 +141,8 @@ const [fiscalRegimes, setFiscalRegimes] = useState([]);
     }
 ]);
 
+const DOWNLOAD_AGENT_URL = '/api/restaurants/public/latest-installer';
+
 useEffect(() => {
         const fetchFiscalRegimes = async () => {
             try {
@@ -753,74 +755,104 @@ useEffect(() => {
     <div className="space-y-4">
         <div className="flex items-center justify-between mb-4">
             <div>
-                <p className="text-sm font-medium">Habilitar integración con SoftRestaurant</p>
+                <p className="text-sm font-medium text-gray-800 dark:text-slate-200">Habilitar integración con SoftRestaurant</p>
                 <p className="text-xs text-gray-500 dark:text-slate-400">Permite sincronizar datos directamente desde tu sistema POS</p>
             </div>
-            <label className="flex items-center">
+            <label className="flex items-center cursor-pointer">
                 <input
                     type="checkbox"
                     checked={activeRestaurant.enableSoftRestaurant}
                     onChange={(e) => updateRestaurant('enableSoftRestaurant', e.target.checked)}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    className="rounded border-gray-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
                 />
             </label>
         </div>
 
-        {activeRestaurant.enableSoftRestaurant && (
-            <div className="space-y-4 pl-4 border-l-2 border-blue-200 dark:border-blue-700">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <InputField 
-                        icon={ServerIcon} 
-                        label="Host / IP del Servidor" 
-                        placeholder="192.168.1.100"
-                        value={activeRestaurant.dbHost}
-                        onChange={(e) => updateRestaurant('dbHost', e.target.value)}
-                    />
-                    <InputField 
-                        icon={CpuChipIcon} 
-                        label="Puerto" 
-                        placeholder="1433"
-                        value={activeRestaurant.dbPort}
-                        onChange={(e) => updateRestaurant('dbPort', e.target.value)}
-                    />
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <InputField 
-                        icon={CircleStackIcon} 
-                        label="Nombre de la Base de Datos" 
-                        placeholder="SoftRestaurantDB"
-                        value={activeRestaurant.dbName}
-                        onChange={(e) => updateRestaurant('dbName', e.target.value)}
-                    />
-                    <InputField 
-                        icon={UserIcon} 
-                        label="Usuario de la BD" 
-                        placeholder="sa"
-                        value={activeRestaurant.dbUser}
-                        onChange={(e) => updateRestaurant('dbUser', e.target.value)}
-                    />
-                    <InputField 
-                        icon={LockClosedIcon} 
-                        label="Contraseña de la BD" 
-                        type="password"
-                        placeholder="Contraseña"
-                        value={activeRestaurant.dbPassword}
-                        onChange={(e) => updateRestaurant('dbPassword', e.target.value)}
-                    />
-                </div>
-
-                <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
-                    <div className="flex items-center gap-2 mb-2">
-                        <CheckIcon className="w-5 h-5 text-blue-600" />
-                        <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Prueba de Conexión</span>
+        {/* Contenido que aparece al activar el checkbox */}
+        <AnimatePresence>
+            {activeRestaurant.enableSoftRestaurant && (
+                <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    className="space-y-4 pl-4 border-l-2 border-blue-200 dark:border-blue-700 overflow-hidden"
+                >
+                    {/* Bloque de Descarga del Agente */}
+                    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                            <CpuChipIcon className="w-5 h-5 text-yellow-600" />
+                            <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Paso 1: Descargar Agente</span>
+                        </div>
+                        <p className="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
+                            Instala este agente en la computadora de tu restaurante que tiene acceso a la base de datos de SoftRestaurant.
+                        </p>
+                        <a
+                            href="/api/restaurants/public/latest-installer"
+                            download
+                            className="inline-flex items-center gap-2 text-sm bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+                        >
+                            <DocumentIcon className="w-4 h-4" />
+                            Descargar Agente (Windows)
+                        </a>
                     </div>
-                    <button className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
-                        Probar Conexión
-                    </button>
-                </div>
-            </div>
-        )}
+
+                    {/* Campos de Conexión a la Base de Datos */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <InputField 
+                            icon={ServerIcon} 
+                            label="Host / IP del Servidor" 
+                            placeholder="192.168.1.100"
+                            value={activeRestaurant.dbHost}
+                            onChange={(e) => updateRestaurant('dbHost', e.target.value)}
+                        />
+                        <InputField 
+                            icon={CpuChipIcon} 
+                            label="Puerto" 
+                            placeholder="1433"
+                            value={activeRestaurant.dbPort}
+                            onChange={(e) => updateRestaurant('dbPort', e.target.value)}
+                        />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <InputField 
+                            icon={CircleStackIcon} 
+                            label="Nombre de la Base de Datos" 
+                            placeholder="SoftRestaurantDB"
+                            value={activeRestaurant.dbName}
+                            onChange={(e) => updateRestaurant('dbName', e.target.value)}
+                        />
+                        <InputField 
+                            icon={UserIcon} 
+                            label="Usuario de la BD" 
+                            placeholder="sa"
+                            value={activeRestaurant.dbUser}
+                            onChange={(e) => updateRestaurant('dbUser', e.target.value)}
+                        />
+                        <InputField 
+                            icon={LockClosedIcon} 
+                            label="Contraseña de la BD" 
+                            type="password"
+                            placeholder="Contraseña"
+                            value={activeRestaurant.dbPassword}
+                            onChange={(e) => updateRestaurant('dbPassword', e.target.value)}
+                        />
+                    </div>
+
+                    {/* Botón de Probar Conexión */}
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                            <CheckIcon className="w-5 h-5 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Paso 2: Probar Conexión</span>
+                        </div>
+                        <button className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
+                            Probar Conexión
+                        </button>
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
     </div>
 </Accordion>
             </div>
