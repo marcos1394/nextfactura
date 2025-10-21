@@ -189,6 +189,16 @@ export const deleteRestaurant = async (restaurantId) => {
     }
 };
 
+export const generateAgentKey = async (restaurantId) => {
+    try {
+        // Llama al nuevo endpoint que creaste en el backend
+        const response = await api.post(`/restaurants/${restaurantId}/generate-agent-key`);
+        return response.data; // Devuelve { success: true, agentKey: '...' }
+    } catch (error) {
+        throw new Error(error.response?.data?.message || 'Error al generar la clave de agente');
+    }
+};
+
 // 3. EXPORTACIÓN POR DEFECTO
 // =======================================================
 export default api;
