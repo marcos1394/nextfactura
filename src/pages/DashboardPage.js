@@ -321,4 +321,6 @@ return (
             </div>
         </main>
     );
-}
+} // <-- Fin de la función Dashboard
+
+export default Dashboard;
