@@ -243,8 +243,13 @@ function Dashboard() {
         // --- FIN DE LA LÓGICA DE PROCESAMIENTO ---
         
     } catch (err) {
-        console.error("Error cargando datos del dashboard:", err);
-        setError(err.message);
+       console.error("Error cargando datos del dashboard:", err);
+    
+    // --- CORRECCIÓN CLAVE ---
+    // Extraemos el mensaje de error específico que viene del backend
+    const errorMessage = err.response?.data?.message || err.message;
+    setError(errorMessage); 
+    // --- FIN DE LA CORRECCIÓN ---
     } finally {
         setIsLoading(false);
     }
@@ -262,7 +267,6 @@ function Dashboard() {
         fetchDashboardData(); // Vuelve a llamar a la función de carga
     };
     
-    if (error) return <div className="p-8 text-center text-red-500">Error al cargar dashboard: {error}</div>;
 
 return (
         <main className={`min-h-screen w-full p-4 sm:p-6 lg:p-8 ${darkMode ? 'bg-gray-900' : 'bg-gray-50'}`}>
