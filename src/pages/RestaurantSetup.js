@@ -7,8 +7,10 @@ import {
     ReceiptPercentIcon,
     CircleStackIcon,
     IdentificationIcon,
+    ArrowDownTrayIcon,
     BookOpenIcon,
     CpuChipIcon,
+    QrCodeIcon,
     PlusIcon,
     TrashIcon,
     ArrowPathIcon,
@@ -33,10 +35,12 @@ import {
     updatePortalConfig, 
     testPOSConnection,
     checkSubdomainAvailability,
-    getFiscalRegimes 
+    getFiscalRegimes,
+    generateAgentKey 
 } from '../services/api';
 import { useDebounce } from '../hooks/useDebounce'; // (Un hook de debounce es recomendado aquí)
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-toastify'; // <-- NUEVO: Para notificaciones
 
 const RestaurantSetup = () => {
     // Estados principales
@@ -50,6 +54,7 @@ const RestaurantSetup = () => {
     const [isTestingConnection, setIsTestingConnection] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState(null);
 const [fiscalRegimes, setFiscalRegimes] = useState([]);
+const [isGeneratingKey, setIsGeneratingKey] = useState(false);
     // --- ESTADOS PARA VALIDACIÓN DE SUBDOMINIO ---
     const [isCheckingSubdomain, setIsCheckingSubdomain] = useState(false);
     const [subdomainStatus, setSubdomainStatus] = useState({
@@ -69,6 +74,8 @@ const [fiscalRegimes, setFiscalRegimes] = useState([]);
         backgroundFile: null,
         customCSS: ''
     });
+
+    
     
     const debouncedSubdomain = useDebounce(portalConfig.subdomain, 500);
 
@@ -120,24 +127,26 @@ const [fiscalRegimes, setFiscalRegimes] = useState([]);
   
 
     // Estado de restaurantes
-    const [restaurants, setRestaurants] = useState([
+   const [restaurants, setRestaurants] = useState([
     {
         id: 1,
         name: '',
         address: '',
         rfc: '',
-        businessName: '', // <-- NUEVO
-        fiscalRegime: '', // <-- NUEVO
+        businessName: '',
+        fiscalRegime: '',
         fiscalAddress: '',
         csdCertFile: null,
         csdKeyFile: null,
         csdPassword: '',
+        connectionMethod: 'agent', // <-- AÑADIDO (default 'agent')
+        agentKey: '',              // <-- AÑADIDO
         dbHost: '',
         dbPort: '1433',
         dbName: '',
         dbUser: '',
         dbPassword: '',
-        enableSoftRestaurant: false
+        enableSoftRestaurant: true // <-- MODIFICADO: Lo dejamos en 'true' por defecto
     }
 ]);
 
@@ -204,10 +213,12 @@ useEffect(() => {
             csdPassword: '',
             dbHost: '',
             dbPort: '1433',
+            connectionMethod: '', // <-- AÑADIDO (default 'agent')
+            agentKey: '',   
             dbName: '',
             dbUser: '',
             dbPassword: '',
-            enableSoftRestaurant: false
+            enableSoftRestaurant: ""
         };
         setRestaurants([...restaurants, newRestaurant]);
         setActiveRestaurantId(newId);
@@ -220,6 +231,30 @@ useEffect(() => {
             setActiveRestaurantId(restaurants.find(r => r.id !== id).id);
         }
     };
+
+    const handleGenerateAgentKey = async () => {
+    setIsGeneratingKey(true); // Activa el estado de "cargando"
+    
+    try {
+        // Llama a la función de api.js con el ID del restaurante activo
+        const response = await generateAgentKey(activeRestaurantId);
+        
+        if (response.success) {
+            // Actualiza el estado local del restaurante con la nueva clave
+            // (Asumiendo que tienes una función 'updateRestaurant' como esta)
+            updateRestaurant('agentKey', response.agentKey); 
+            toast.success('¡Nueva clave de agente generada!');
+        } else {
+            // Maneja un error devuelto por el backend
+            throw new Error(response.message || 'Error desconocido');
+        }
+    } catch (error) {
+        console.error("Error al generar la clave de agente:", error);
+        toast.error(error.message || 'No se pudo generar la clave');
+    } finally {
+        setIsGeneratingKey(false); // Desactiva el estado de "cargando"
+    }
+};
 
     const handleNext = () => {
         if (currentStep < 3) setCurrentStep(currentStep + 1);
@@ -751,58 +786,121 @@ useEffect(() => {
                 </Accordion>
 
                 {/* Conexión a SoftRestaurant */}
-<Accordion title="Conexión a SoftRestaurant (Opcional)" icon={CircleStackIcon}>
-    <div className="space-y-4">
-        <div className="flex items-center justify-between mb-4">
-            <div>
-                <p className="text-sm font-medium text-gray-800 dark:text-slate-200">Habilitar integración con SoftRestaurant</p>
-                <p className="text-xs text-gray-500 dark:text-slate-400">Permite sincronizar datos directamente desde tu sistema POS</p>
-            </div>
-            <label className="flex items-center cursor-pointer">
-                <input
-                    type="checkbox"
-                    checked={activeRestaurant.enableSoftRestaurant}
-                    onChange={(e) => updateRestaurant('enableSoftRestaurant', e.target.checked)}
-                    className="rounded border-gray-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
-                />
-            </label>
+<Accordion title="Conexión con Punto de Venta" icon={CircleStackIcon} defaultOpen={true}>
+    <div className="space-y-6">
+        
+        {/* --- SECCIÓN 1: MÉTODO DE CONEXIÓN --- */}
+        <p className="text-sm text-gray-500 dark:text-slate-400">
+            Elige cómo quieres sincronizar tus ventas.
+        </p>
+        <div className="flex items-center p-1 bg-gray-200 dark:bg-slate-800 rounded-lg">
+            <button 
+                onClick={() => updateRestaurant('connectionMethod', 'agent')}
+                className={`w-1/2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    activeRestaurant.connectionMethod === 'agent' 
+                    ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-700 dark:text-white' 
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50/50 dark:hover:bg-gray-700/50'
+                }`}
+            >
+                Agente (Recomendado)
+            </button>
+            <button 
+                onClick={() => updateRestaurant('connectionMethod', 'direct')}
+                className={`w-1/2 px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    activeRestaurant.connectionMethod === 'direct' 
+                    ? 'bg-white text-blue-600 shadow-sm dark:bg-gray-700 dark:text-white' 
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50/50 dark:hover:bg-gray-700/50'
+                }`}
+            >
+                Conexión Directa
+            </button>
         </div>
 
-        {/* Contenido que aparece al activar el checkbox */}
+        {/* --- CONTENIDO PARA MÉTODO "AGENTE" --- */}
         <AnimatePresence>
-            {activeRestaurant.enableSoftRestaurant && (
+            {activeRestaurant.connectionMethod === 'agent' && (
                 <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3, ease: 'easeInOut' }}
-                    className="space-y-4 pl-4 border-l-2 border-blue-200 dark:border-blue-700 overflow-hidden"
+                    transition={{ duration: 0.3 }}
+                    className="space-y-4 pt-4 border-t border-gray-200 dark:border-slate-700 overflow-hidden"
                 >
-                    {/* Bloque de Descarga del Agente */}
-                    <div className="bg-yellow-50 dark:bg-yellow-900/20 p-4 rounded-lg">
+                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                         <div className="flex items-center gap-2 mb-2">
-                            <CpuChipIcon className="w-5 h-5 text-yellow-600" />
-                            <span className="text-sm font-medium text-yellow-800 dark:text-yellow-200">Paso 1: Descargar Agente</span>
+                            <ArrowDownTrayIcon className="w-5 h-5 text-blue-600" />
+                            <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Paso 1: Descargar el Agente</span>
                         </div>
-                        <p className="text-xs text-yellow-700 dark:text-yellow-300 mb-3">
-                            Instala este agente en la computadora de tu restaurante que tiene acceso a la base de datos de SoftRestaurant.
+                        <p className="text-xs text-blue-700 dark:text-blue-300 mb-3">
+                            Instala este agente en la computadora de tu restaurante que corre SoftRestaurant.
                         </p>
                         <a
                             href="/api/restaurants/public/latest-installer"
                             download
-                            className="inline-flex items-center gap-2 text-sm bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors"
+                            className="inline-flex items-center gap-2 text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
                         >
                             <DocumentIcon className="w-4 h-4" />
                             Descargar Agente (Windows)
                         </a>
                     </div>
+                    
+                    <div className="bg-green-50 dark:bg-green-900/20 p-4 rounded-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                            <QrCodeIcon className="w-5 h-5 text-green-600" />
+                            <span className="text-sm font-medium text-green-800 dark:text-green-200">Paso 2: Vincular Agente</span>
+                        </div>
+                        <p className="text-xs text-green-700 dark:text-green-300 mb-3">
+                            Ingresa esta clave en el agente que descargaste para vincularlo de forma segura a este restaurante.
+                        </p>
+                        {activeRestaurant.agentKey ? (
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="text"
+                                    readOnly
+                                    value={activeRestaurant.agentKey}
+                                    className="flex-1 py-2 px-3 border border-gray-300 dark:border-slate-600 bg-white dark:bg-slate-900 rounded-lg font-mono text-sm"
+                                />
+                                <button 
+                                    onClick={handleGenerateAgentKey}
+                                    disabled={isGeneratingKey}
+                                    className="text-sm bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50"
+                                >
+                                    {isGeneratingKey ? 'Generando...' : 'Regenerar Clave'}
+                                </button>
+                            </div>
+                        ) : (
+                            <button
+                                onClick={handleGenerateAgentKey}
+                                disabled={isGeneratingKey}
+                                className="text-sm bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                            >
+                                {isGeneratingKey ? 'Generando...' : 'Generar Clave de Agente'}
+                            </button>
+                        )}
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
 
-                    {/* Campos de Conexión a la Base de Datos */}
+        {/* --- CONTENIDO PARA MÉTODO "CONEXIÓN DIRECTA" --- */}
+        <AnimatePresence>
+            {activeRestaurant.connectionMethod === 'direct' && (
+                <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="space-y-4 pt-4 border-l-2 border-red-200 dark:border-red-700 overflow-hidden pl-4"
+                >
+                    <p className="text-sm text-red-700 dark:text-red-300">
+                        <strong>Advertencia:</strong> Este método requiere abrir puertos en el firewall de tu restaurante y exponer tu base de datos a internet, lo cual es un riesgo de seguridad. Recomendamos usar el Agente.
+                    </p>
+                
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <InputField 
                             icon={ServerIcon} 
-                            label="Host / IP del Servidor" 
-                            placeholder="192.168.1.100"
+                            label="Host / IP Pública del Servidor" 
+                            placeholder="189.120.30.40"
                             value={activeRestaurant.dbHost}
                             onChange={(e) => updateRestaurant('dbHost', e.target.value)}
                         />
@@ -814,7 +912,6 @@ useEffect(() => {
                             onChange={(e) => updateRestaurant('dbPort', e.target.value)}
                         />
                     </div>
-
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <InputField 
                             icon={CircleStackIcon} 
@@ -840,11 +937,10 @@ useEffect(() => {
                         />
                     </div>
 
-                    {/* Botón de Probar Conexión */}
                     <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
                         <div className="flex items-center gap-2 mb-2">
                             <CheckIcon className="w-5 h-5 text-blue-600" />
-                            <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Paso 2: Probar Conexión</span>
+                            <span className="text-sm font-medium text-blue-800 dark:text-blue-200">Probar Conexión</span>
                         </div>
                         <button className="text-sm bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors">
                             Probar Conexión

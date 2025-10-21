@@ -86,7 +86,7 @@ export default function Header() {
     // Enlaces para usuarios AUTENTICADOS (Dentro de la App)
     const privateLinks = [
         { name: 'Dashboard', to: '/dashboard' },
-        { name: 'Configuración', to: '/restaurant-config' },
+        { name: 'Configuración', to: '/restaurantconfig' },
         { name: 'Reportes', to: '/reports' },
     ];
 
