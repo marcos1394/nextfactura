@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react'; // <-- AÑADIR useCallbackimport { motion, AnimatePresence } from 'framer-motion';
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
     BuildingStorefrontIcon,
     MapPinIcon,
@@ -36,35 +37,66 @@ import {
     testPOSConnection,
     checkSubdomainAvailability,
     getFiscalRegimes,
-    generateAgentKey 
+    generateAgentKey,
+    getFullRestaurantConfig, // <-- IMPORTAR LA NUEVA FUNCIÓN
 } from '../services/api';
-import { useDebounce } from '../hooks/useDebounce'; // (Un hook de debounce es recomendado aquí)
-import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'react-toastify'; // <-- NUEVO: Para notificaciones
+import { useDebounce } from '../hooks/useDebounce';
+import { toast } from 'react-toastify';
+import { useAuth } from '../hooks/useAuth'; // <-- IMPORTAR useAuth
+
+
+// --- FUNCIÓN HELPER PARA RESTAURANTE NUEVO ---
+const createBlankRestaurant = () => ({
+    id: `temp_${Date.now()}`, // ID temporal único para React
+    name: 'Nuevo Restaurante',
+    address: '',
+    rfc: '',
+    businessName: '',
+    fiscalRegime: '',
+    fiscalAddress: '',
+    csdCertFile: null,
+    csdKeyFile: null,
+    csdPassword: '',
+    connectionMethod: 'agent',
+    agentKey: '',
+    dbHost: '',
+    dbPort: '1433',
+    dbName: '',
+    dbUser: '',
+    dbPassword: '',
+});
 
 const RestaurantSetup = () => {
-    // Estados principales
+    // --- ESTADOS PRINCIPALES ---
+    const { user, isLoading: isAuthLoading } = useAuth();
     const [darkMode, setDarkMode] = useState(false);
     const [currentStep, setCurrentStep] = useState(1);
-    const [activeRestaurantId, setActiveRestaurantId] = useState(1);
     
+    // --- ESTADOS CORREGIDOS ---
+    const [activeRestaurantId, setActiveRestaurantId] = useState(null); // Inicia en null
+    const [restaurants, setRestaurants] = useState([]); // Inicia como array vacío
+    const [isConfigLoading, setIsConfigLoading] = useState(true); // Estado de carga para los datos
+
     // Estados para manejar el envío y la retroalimentación
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [submitError, setSubmitError] = useState(null);
     const [isTestingConnection, setIsTestingConnection] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState(null);
-const [fiscalRegimes, setFiscalRegimes] = useState([]);
-const [isGeneratingKey, setIsGeneratingKey] = useState(false);
+    const [fiscalRegimes, setFiscalRegimes] = useState([]);
+    const [isGeneratingKey, setIsGeneratingKey] = useState(false);
+    
     // --- ESTADOS PARA VALIDACIÓN DE SUBDOMINIO ---
     const [isCheckingSubdomain, setIsCheckingSubdomain] = useState(false);
     const [subdomainStatus, setSubdomainStatus] = useState({
-        available: null, // null, true, o false
+        available: null,
         message: '',
         cleanName: ''
     });
-      const [portalConfig, setPortalConfig] = useState({
+    
+    // Estado del portal (Paso 1)
+    const [portalConfig, setPortalConfig] = useState({
         portalName: 'Mi Restaurante',
-        subdomain: 'mirestaurante',
+        subdomain: '', // Inicia vacío
         primaryColor: '#2563eb',
         logoUrl: '',
         logoFile: null,
@@ -75,32 +107,41 @@ const [isGeneratingKey, setIsGeneratingKey] = useState(false);
         customCSS: ''
     });
 
-    
-    
+    // --- FUNCIONES HELPER ---
+
+    const updatePortalConfig = (key, value) => {
+        setPortalConfig(prev => ({ ...prev, [key]: value }));
+    };
+
+    const updateRestaurant = (field, value) => {
+        setRestaurants(prev => 
+            prev.map(r => 
+                r.id === activeRestaurantId ? { ...r, [field]: value } : r
+            )
+        );
+    };
+
+    // --- LÓGICA DE VALIDACIÓN DE SUBDOMINIO ---
     const debouncedSubdomain = useDebounce(portalConfig.subdomain, 500);
 
-    // 2. Función para limpiar el nombre
     const generateSubdomainName = useCallback((name) => {
         return name
             .toLowerCase()
             .normalize('NFD')
             .replace(/[\u0300-\u036f]/g, '')
-            .replace(/[^a-z0-9-]/g, '') // Solo letras, números y guiones
+            .replace(/[^a-z0-9-]/g, '')
             .replace(/-+/g, '-')
             .replace(/^-|-$/g, '')
             .substring(0, 20);
     }, []);
 
-    // 3. useEffect: Reacciona al valor "retrasado" para llamar a la API
     useEffect(() => {
         const checkAvailability = async () => {
             const cleanName = generateSubdomainName(debouncedSubdomain);
-
             if (cleanName.length < 3) {
                 setSubdomainStatus({ available: null, message: '', cleanName });
                 return;
             }
-            
             setIsCheckingSubdomain(true);
             try {
                 const response = await checkSubdomainAvailability(cleanName);
@@ -120,150 +161,125 @@ const [isGeneratingKey, setIsGeneratingKey] = useState(false);
             }
         };
         
-        checkAvailability();
+        if (debouncedSubdomain.length >= 3) {
+            checkAvailability();
+        } else {
+            setSubdomainStatus({ available: null, message: '' });
+        }
     }, [debouncedSubdomain, generateSubdomainName]);
 
-    // Estado del portal
-  
+    // --- LÓGICA DE CARGA DE DATOS ---
 
-    // Estado de restaurantes
-   const [restaurants, setRestaurants] = useState([
-    {
-        id: 1,
-        name: '',
-        address: '',
-        rfc: '',
-        businessName: '',
-        fiscalRegime: '',
-        fiscalAddress: '',
-        csdCertFile: null,
-        csdKeyFile: null,
-        csdPassword: '',
-        connectionMethod: 'agent', // <-- AÑADIDO (default 'agent')
-        agentKey: '',              // <-- AÑADIDO
-        dbHost: '',
-        dbPort: '1433',
-        dbName: '',
-        dbUser: '',
-        dbPassword: '',
-        enableSoftRestaurant: true // <-- MODIFICADO: Lo dejamos en 'true' por defecto
-    }
-]);
-
-const DOWNLOAD_AGENT_URL = '/api/restaurants/public/latest-installer';
-
-useEffect(() => {
+    // Cargar Catálogos (Regímenes Fiscales)
+    useEffect(() => {
         const fetchFiscalRegimes = async () => {
             try {
-                // Filtramos por 'F' (Persona Física) y 'M' (Persona Moral)
-                // Es más eficiente que traerlos todos si no los necesitas.
-                // Si quieres todos, simplemente llama a getFiscalRegimes() sin parámetros.
                 const regimes = await getFiscalRegimes(); 
                 setFiscalRegimes(regimes);
             } catch (error) {
                 console.error("Error al cargar el catálogo de regímenes fiscales:", error);
             }
         };
-        
         fetchFiscalRegimes();
-    }, []); // El array vacío asegura que solo se ejecute una vez
+    }, []); // Se ejecuta solo una vez
 
-    // Funciones auxiliares
-    const activeRestaurant = restaurants.find(r => r.id === activeRestaurantId);
-
-
-    const updateRestaurant = (field, value) => {
-        console.log(`[STATE UPDATE] Campo: '${field}', Nuevo Valor: '${value}'`);
-        setRestaurants(prev => prev.map(r => 
-            r.id === activeRestaurantId 
-                ? { ...r, [field]: value }
-                : r
-        ));
-    };
-
-    const updatePortalConfig = (field, value) => {
-        setPortalConfig(prev => ({ ...prev, [field]: value }));
-    };
-
-    const handleImageUpload = (field, file) => {
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const imageUrl = e.target.result;
-                setPortalConfig(prev => ({
-                    ...prev,
-                    [field]: imageUrl,
-                    [`${field.replace('Url', 'File')}`]: file
-                }));
-            };
-            reader.readAsDataURL(file);
+    // Cargar Configuración del Restaurante del Usuario
+    useEffect(() => {
+        if (isAuthLoading) return; // Espera a que el AuthContext termine
+        if (!user) {
+            setIsConfigLoading(false);
+            return;
         }
-    };
+
+        const loadRestaurantData = async () => {
+            try {
+                setIsConfigLoading(true);
+                const response = await getFullRestaurantConfig();
+                
+                if (response.success && response.restaurants.length > 0) {
+                    // Si el usuario ya tiene restaurantes, los cargamos
+                    setRestaurants(response.restaurants);
+                    setActiveRestaurantId(response.restaurants[0].id); // Activamos el primero
+                } else {
+                    // Si no tiene restaurantes, creamos uno en blanco
+                    const newRest = createBlankRestaurant();
+                    setRestaurants([newRest]);
+                    setActiveRestaurantId(newRest.id);
+                }
+            } catch (error) {
+                console.error("Error al cargar la configuración del restaurante:", error);
+                setSubmitError(error.message);
+            } finally {
+                setIsConfigLoading(false);
+            }
+        };
+
+        loadRestaurantData();
+    }, [user, isAuthLoading]); // Se ejecuta cuando 'user' está listo
+
+    // --- FUNCIONES DE ACCIÓN ---
 
     const addRestaurant = () => {
-        const newId = restaurants.length > 0 ? Math.max(...restaurants.map(r => r.id)) + 1 : 1;
-        const newRestaurant = {
-            id: newId,
-            name: '',
-            address: '',
-            rfc: '',
-            fiscalAddress: '',
-            csdCertFile: null,
-            csdKeyFile: null,
-            csdPassword: '',
-            dbHost: '',
-            dbPort: '1433',
-            connectionMethod: '', // <-- AÑADIDO (default 'agent')
-            agentKey: '',   
-            dbName: '',
-            dbUser: '',
-            dbPassword: '',
-            enableSoftRestaurant: ""
-        };
-        setRestaurants([...restaurants, newRestaurant]);
-        setActiveRestaurantId(newId);
+        const newRest = createBlankRestaurant();
+        setRestaurants(prev => [...prev, newRest]);
+        setActiveRestaurantId(newRest.id);
     };
 
     const removeRestaurant = (id) => {
-        if (restaurants.length <= 1) return;
+        if (restaurants.length <= 1) {
+            toast.warn('Debes tener al menos un restaurante configurado.');
+            return;
+        }
         setRestaurants(prev => prev.filter(r => r.id !== id));
         if (activeRestaurantId === id) {
-            setActiveRestaurantId(restaurants.find(r => r.id !== id).id);
+            // Activa el primer restaurante de la lista restante
+            setActiveRestaurantId(restaurants[0]?.id || null);
+        }
+    };
+    
+    const handleGenerateAgentKey = async () => {
+        // Validación para IDs temporales
+        if (typeof activeRestaurantId === 'string' && activeRestaurantId.startsWith('temp_')) {
+            toast.error('Guarda el restaurante primero para poder generar una clave.');
+            return;
+        }
+
+        setIsGeneratingKey(true);
+        try {
+            const response = await generateAgentKey(activeRestaurantId);
+            if (response.success) {
+                updateRestaurant('agentKey', response.agentKey); 
+                toast.success('¡Nueva clave de agente generada!');
+            } else {
+                throw new Error(response.message || 'Error desconocido');
+            }
+        } catch (error) {
+            console.error("Error al generar la clave de agente:", error);
+            toast.error(error.message || 'No se pudo generar la clave');
+        } finally {
+            setIsGeneratingKey(false);
         }
     };
 
-    const handleGenerateAgentKey = async () => {
-    setIsGeneratingKey(true); // Activa el estado de "cargando"
-    
-    try {
-        // Llama a la función de api.js con el ID del restaurante activo
-        const response = await generateAgentKey(activeRestaurantId);
+    // Función placeholder para la subida de archivos (ajusta según tu lógica)
+    const handleImageUpload = (field, file) => {
+    if (file) {
+        // Creamos una URL local para la vista previa de la imagen
+        const previewUrl = URL.createObjectURL(file);
         
-        if (response.success) {
-            // Actualiza el estado local del restaurante con la nueva clave
-            // (Asumiendo que tienes una función 'updateRestaurant' como esta)
-            updateRestaurant('agentKey', response.agentKey); 
-            toast.success('¡Nueva clave de agente generada!');
-        } else {
-            // Maneja un error devuelto por el backend
-            throw new Error(response.message || 'Error desconocido');
+        // --- CORRECCIÓN CLAVE ---
+        // Usamos 'field' (el nombre del campo) en lugar de 'key'
+        if (field === 'logoUrl') {
+            updatePortalConfig('logoFile', file); // Guardamos el objeto del archivo
+            updatePortalConfig('logoUrl', previewUrl); // Guardamos la URL de vista previa
+        } else if (field === 'backgroundImage') {
+            updatePortalConfig('backgroundFile', file); // Guardamos el objeto del archivo
+            updatePortalConfig('backgroundImage', previewUrl); // Guardamos la URL de vista previa
         }
-    } catch (error) {
-        console.error("Error al generar la clave de agente:", error);
-        toast.error(error.message || 'No se pudo generar la clave');
-    } finally {
-        setIsGeneratingKey(false); // Desactiva el estado de "cargando"
     }
 };
 
-    const handleNext = () => {
-        if (currentStep < 3) setCurrentStep(currentStep + 1);
-    };
-
-    const handlePrev = () => {
-        if (currentStep > 1) setCurrentStep(currentStep - 1);
-    };
-
+    // Función placeholder para el botón de prueba (ajusta la lógica)
     const handleTestDbConnection = async () => {
         if (!activeRestaurantId) return;
 
@@ -271,60 +287,127 @@ useEffect(() => {
         setConnectionStatus(null);
         
         try {
-            const result = await testPOSConnection(activeRestaurantId);
+            // Obtenemos los datos del restaurante activo
+            const activeRest = restaurants.find(r => r.id === activeRestaurantId);
+            const connectionData = {
+                host: activeRest.dbHost,
+                port: activeRest.dbPort,
+                user: activeRest.dbUser,
+                password: activeRest.dbPassword,
+                database: activeRest.dbName
+            };
+            
+            // Llamamos a la API de prueba
+            const result = await testPOSConnection(connectionData); 
+            
             setConnectionStatus({ success: true, message: result.message });
-            alert('Éxito: ' + result.message);
+            toast.success(result.message);
         } catch (error) {
             setConnectionStatus({ success: false, message: error.message });
-            alert('Error: ' + error.message);
+            toast.error(error.message);
         } finally {
             setIsTestingConnection(false);
         }
     };
+    
+    // En src/pages/RestaurantSetup.js
 
-    const handleFinalSubmit = async () => {
+// 1. Mueve la función 'loadRestaurantData' FUERA del useEffect
+const loadRestaurantData = useCallback(async () => {
+    if (!user) { // Si no hay usuario, no hacer nada
+        setIsConfigLoading(false);
+        return;
+    }
+    
+    try {
+        setIsConfigLoading(true);
+        const response = await getFullRestaurantConfig();
+        
+        if (response.success && response.restaurants.length > 0) {
+            setRestaurants(response.restaurants);
+            setActiveRestaurantId(response.restaurants[0].id);
+        } else {
+            const newRest = createBlankRestaurant();
+            setRestaurants([newRest]);
+            setActiveRestaurantId(newRest.id);
+        }
+    } catch (error) {
+        console.error("Error al cargar la configuración del restaurante:", error);
+        setSubmitError(error.message);
+    } finally {
+        setIsConfigLoading(false);
+    }
+}, [user]); // Depende del objeto 'user'
+
+// 2. El useEffect ahora solo llama a la función
+useEffect(() => {
+    if (isAuthLoading) return; // Espera a que el AuthContext termine
+    
+    loadRestaurantData();
+    
+}, [user, isAuthLoading, loadRestaurantData]); // Añade la función como dependencia
+   
+
+    
+    // --- DATOS DERIVADOS ---
+    // Buscamos el restaurante activo en el estado 'restaurants'
+    const activeRestaurant = restaurants.find(r => r.id === activeRestaurantId);
+
+    // --- RENDERIZADO DE CARGA ---
+    // Si la autenticación o la configuración inicial están cargando, mostramos un spinner
+    if (isAuthLoading || isConfigLoading) {
+        return (
+            <div className={`min-h-screen flex justify-center items-center ${darkMode ? 'bg-slate-900' : 'bg-gray-50'}`}>
+                {/* Aquí puedes poner un spinner real */}
+                <ArrowPathIcon className="w-8 h-8 text-gray-500 animate-spin" />
+                <p className="text-gray-500 ml-3">Cargando tu configuración...</p>
+            </div>
+        );
+    }
+
+const handleFinalSubmit = async () => {
     setIsSubmitting(true);
     setSubmitError(null);
 
     try {
-        const createdRestaurantPromises = restaurants.map(restaurant => {
-            const restaurantData = {
-                name: restaurant.name,
-                address: restaurant.address,
-                connectionHost: restaurant.dbHost,
-                connectionPort: restaurant.dbPort,
-                connectionUser: restaurant.dbUser,
-                connectionPassword: restaurant.dbPassword,
-                connectionDbName: restaurant.dbName,
-            };
-            
-            // --- SECCIÓN CORREGIDA ---
-            // Asegúrate de que este objeto incluya todos los campos fiscales
-            const fiscalData = {
-                rfc: restaurant.rfc,
-                businessName: restaurant.businessName,      // <-- AÑADIDO
-                fiscalRegime: restaurant.fiscalRegime,      // <-- AÑADIDO
-                fiscalAddress: restaurant.fiscalAddress,
-                csdPassword: restaurant.csdPassword,
-            };
+        // --- LÓGICA DE ACTUALIZACIÓN (NUEVA) ---
+        // 1. Filtra los restaurantes que YA EXISTEN en la BD (tienen UUID real)
+        const existingRestaurants = restaurants.filter(r => typeof r.id === 'string' && !r.id.startsWith('temp_'));
+        
+        // 2. Filtra los restaurantes NUEVOS (tienen ID temporal)
+        const newRestaurants = restaurants.filter(r => typeof r.id === 'string' && r.id.startsWith('temp_'));
 
-            const files = {
-                csdCertificate: restaurant.csdCertFile,
-                csdKey: restaurant.csdKeyFile,
-            };
+        // 3. Prepara las promesas de actualización
+        const updatePromises = existingRestaurants.map(restaurant => {
+            const { restaurantData, fiscalData, files } = prepareRestaurantPayload(restaurant);
+            // Llama a una función 'updateRestaurant' de tu api.js (¡necesitarás crearla!)
+            // return updateRestaurant(restaurant.id, restaurantData, fiscalData, files);
+            console.log('ACTUALIZANDO (simulado):', restaurantData, fiscalData);
+        });
 
+        // 4. Prepara las promesas de creación
+        const createPromises = newRestaurants.map(restaurant => {
+            const { restaurantData, fiscalData, files } = prepareRestaurantPayload(restaurant);
             return createRestaurant(restaurantData, fiscalData, files);
         });
 
-        const creationResults = await Promise.all(createdRestaurantPromises);
-        console.log('Restaurantes creados:', creationResults);
+        // 5. Ejecuta todas las promesas en paralelo
+        const updateResults = await Promise.all(updatePromises);
+        const createResults = await Promise.all(createPromises);
+        
+        console.log('Restaurantes actualizados:', updateResults);
+        console.log('Restaurantes creados:', createResults);
 
-        if (creationResults.length > 0 && creationResults[0].restaurant) {
-            const firstRestaurantId = creationResults[0].restaurant.id;
+        // --- LÓGICA DEL PORTAL (SIN CAMBIOS, PERO NECESITA EL ID CORRECTO) ---
+        // Usamos el ID del restaurante activo, o el primer restaurante creado/actualizado
+        const activeRestId = activeRestaurantId.startsWith('temp_') 
+            ? createResults[0]?.restaurant.id 
+            : activeRestaurantId;
 
+        if (activeRestId) {
             const portalData = {
                 name: portalConfig.portalName,
-                subdomain: portalConfig.subdomain,
+                subdomain: subdomainStatus.cleanName,
                 primaryColor: portalConfig.primaryColor,
                 welcomeMessage: portalConfig.welcomeMessage,
                 showWelcomeMessage: portalConfig.showWelcomeMessage,
@@ -336,22 +419,65 @@ useEffect(() => {
                 backgroundImage: portalConfig.backgroundFile
             };
             
-            // Asumo que tienes una función similar para actualizar el portal
-            // await updatePortal(firstRestaurantId, portalData, portalFiles);
+            // Llama a la función de tu api.js
+            await updatePortalConfig(activeRestId, portalData, portalFiles);
             console.log('Portal configurado exitosamente.');
         }
 
-        alert('¡Configuración guardada exitosamente!');
-        window.location.href = '/dashboard';
+        toast.success('¡Configuración guardada exitosamente!');
+        
+        // --- CORRECCIÓN FINAL ---
+        // 6. Llama a la función 'loadRestaurantData' que ahora es accesible
+        await loadRestaurantData(); 
 
     } catch (error) {
         console.error('Error al guardar la configuración:', error);
         setSubmitError(error.message || 'Ocurrió un error inesperado. Por favor, revisa los datos e inténtalo de nuevo.');
-        alert(`Error al guardar: ${error.message}`);
+        toast.error(`Error al guardar: ${error.message}`);
     } finally {
         setIsSubmitting(false);
     }
 };
+
+const handleNext = () => {
+    // Aquí puedes añadir validaciones antes de permitir avanzar
+    if (currentStep < 3) setCurrentStep(currentStep + 1);
+};
+
+const handlePrev = () => {
+    if (currentStep > 1) setCurrentStep(currentStep - 1);
+};
+// --- FUNCIÓN HELPER AÑADIDA ---
+// Esta función evita repetir código para crear los payloads
+const prepareRestaurantPayload = (restaurant) => {
+    const restaurantData = {
+        name: restaurant.name,
+        address: restaurant.address,
+        connectionMethod: restaurant.connectionMethod,
+        agentKey: restaurant.agentKey,
+        dbHost: restaurant.dbHost,
+        dbPort: restaurant.dbPort,
+        connectionUser: restaurant.dbUser,
+        connectionPassword: restaurant.dbPassword,
+        connectionDbName: restaurant.dbName,
+    };
+    
+    const fiscalData = {
+        rfc: restaurant.rfc,
+        businessName: restaurant.businessName,
+        fiscalRegime: restaurant.fiscalRegime,
+        fiscalAddress: restaurant.fiscalAddress,
+        csdPassword: restaurant.csdPassword,
+    };
+
+    const files = {
+        csdCertificate: restaurant.csdCertFile,
+        csdKey: restaurant.csdKeyFile,
+    };
+    
+    return { restaurantData, fiscalData, files };
+};
+
 
 
     return (

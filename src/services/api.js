@@ -199,6 +199,18 @@ export const generateAgentKey = async (restaurantId) => {
     }
 };
 
+export const getFullRestaurantConfig = async () => {
+    try {
+        // Llama al endpoint del backend que obtiene toda la configuración.
+        // La cookie de autenticación se envía automáticamente gracias a 'withCredentials: true'.
+        const response = await api.get('/restaurants/full-config');
+        return response.data; // Devuelve { success: true, restaurants: [...] }
+    } catch (error) {
+        // Si falla, lanza un error para que el componente (useEffect) lo atrape.
+        throw error.response?.data || new Error('Error al obtener la configuración del restaurante.');
+    }
+};
+
 // 3. EXPORTACIÓN POR DEFECTO
 // =======================================================
 export default api;
