@@ -1,9 +1,10 @@
 /** @type {import('tailwindcss').Config} */
-module.exports = {
+export default {
   content: [
+    "./index.html", // OBLIGATORIO en Vite: rastrear el HTML raíz
     "./src/**/*.{js,jsx,ts,tsx}",
   ],
-  darkMode: 'class', // Habilita el modo oscuro basado en la clase 'dark'
+  darkMode: 'class', // Mantiene tu configuración de modo oscuro manual
   theme: {
     extend: {
       keyframes: {
@@ -16,10 +17,10 @@ module.exports = {
         },
       },
       animation: {
-        shake: 'shake 0.5s ease-in-out', // Definimos la animación con la duración y el easing
+        shake: 'shake 0.5s ease-in-out',
       },
       colors: {
-        // Puedes agregar colores personalizados si es necesario
+        // Mantenemos tus colores personalizados de marca
         blue: {
           600: '#1d4ed8',
           700: '#1e40af',
