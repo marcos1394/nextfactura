@@ -16,7 +16,7 @@
     "@stripe/react-stripe-js": "^2.7.0",
     "@stripe/stripe-js": "^3.3.0",
     "aws-amplify": "^6.3.0",
-    "axios": "^1.7.0",
+    "axios": "^1.13.5",
     "canvas-confetti": "^1.9.4",
     "chart.js": "^4.4.0",
     "clsx": "^2.1.1",
