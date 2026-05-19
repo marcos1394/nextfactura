@@ -1,3 +1,4 @@
+console.log("\n\n🚨🚨 VITE ESTÁ LEYENDO ESTA CARPETA: ", process.cwd(), "\n\n");
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';

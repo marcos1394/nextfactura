@@ -197,4 +197,23 @@ export const getPurchaseStatus = async (purchaseId) => {
     }
 };
 
+// En api.js
+
+export const downloadConnectorInstaller = async () => {
+    try {
+        // Axios necesita saber que la respuesta es un archivo binario (blob)
+        const response = await api.get('/connector/download', {
+            responseType: 'blob',
+            headers: {
+                'Accept': 'application/octet-stream'
+            }
+        });
+        // Retornamos la respuesta completa porque necesitamos 'data' (el archivo) 
+        return response; 
+    } catch (error) {
+        // Mejor manejo de error para saber si fue 404, 403, etc.
+        throw error;
+    }
+};
+
 export default api;
